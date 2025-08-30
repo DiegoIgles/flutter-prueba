@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/login_request.dart';
 import '../models/cliente_create.dart';
 import '../services/auth_service.dart';
-import 'cliente_welcome_page.dart';
+import 'cliente_dashboard_page.dart';
 
 class ClienteLoginPage extends StatefulWidget {
   const ClienteLoginPage({super.key});
@@ -42,11 +42,17 @@ class _ClienteLoginPageState extends State<ClienteLoginPage> {
       print('🪪 Access Token: ${tokenRes.accessToken}');
       print('🧾 Token Type: ${tokenRes.tokenType}');
 
+      // Obtener información del cliente
+      final clienteInfo = await auth.getCurrentCliente();
+
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ClienteWelcomePage(token: tokenRes.accessToken),
+          builder: (_) => ClienteDashboardPage(
+            token: tokenRes.accessToken,
+            cliente: clienteInfo,
+          ),
         ),
       );
     } catch (e) {
