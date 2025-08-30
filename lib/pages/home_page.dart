@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:prueba/pages/chofer_login_page.dart';
 import '../widgets/sidebar.dart';
 import 'cliente_login_page.dart';
 
@@ -57,7 +58,8 @@ class HomePage extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ClienteLoginPage()),
+                        MaterialPageRoute(
+                            builder: (_) => const ClienteLoginPage()),
                       );
                     },
                   ),
@@ -66,8 +68,10 @@ class HomePage extends StatelessWidget {
                     label: 'Chofer',
                     color: purple,
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Login de chofer aún no implementado')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ChoferLoginPage()),
                       );
                     },
                   ),
