@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/login_request.dart';
 import '../services/auth_service.dart';
-import 'chofer_welcome_page.dart';
+import 'chofer_dashboard_page.dart';
 
 class ChoferLoginPage extends StatefulWidget {
   const ChoferLoginPage({super.key});
@@ -33,7 +33,7 @@ class _ChoferLoginPageState extends State<ChoferLoginPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ChoferWelcomePage(token: tokenRes.accessToken),
+          builder: (_) => ChoferDashboardPage(token: tokenRes.accessToken),
         ),
       );
     } catch (e) {
@@ -110,9 +110,8 @@ class _ChoferLoginPageState extends State<ChoferLoginPage> {
                         hintText: 'Contraseña',
                         border: UnderlineInputBorder(),
                       ),
-                      validator: (v) => v == null || v.isEmpty
-                          ? 'Ingrese contraseña'
-                          : null,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Ingrese contraseña' : null,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(

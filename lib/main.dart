@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'pages/home_page.dart'; // ← usamos HomePage
 import 'providers/billetera_provider.dart';
+import 'providers/chofer_billetera_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,8 +13,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => BilleteraProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => BilleteraProvider()),
+        ChangeNotifierProvider(create: (context) => ChoferBilleteraProvider()),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Transporte App',

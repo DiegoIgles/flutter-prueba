@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/billetera_service.dart';
-import '../providers/billetera_provider.dart';
+import '../providers/chofer_billetera_provider.dart';
 
-
-class ClienteBilleteraPage extends StatefulWidget {
-  const ClienteBilleteraPage({super.key});
+class ChoferBilleteraPage extends StatefulWidget {
+  const ChoferBilleteraPage({super.key});
 
   @override
-  State<ClienteBilleteraPage> createState() => _ClienteBilleteraPageState();
+  State<ChoferBilleteraPage> createState() => _ChoferBilleteraPageState();
 }
 
-class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
-  final BilleteraService _billeteraService = BilleteraService();
-  bool _loadingCarga = false;
+class _ChoferBilleteraPageState extends State<ChoferBilleteraPage> {
+  bool _loadingAction = false;
 
   @override
   void initState() {
     super.initState();
     // Cargar saldo si no está disponible
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<BilleteraProvider>(context, listen: false);
+      final provider =
+          Provider.of<ChoferBilleteraProvider>(context, listen: false);
       if (provider.saldo == null && !provider.loadingSaldo) {
         provider.cargarSaldo();
       }
@@ -28,45 +26,47 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
   }
 
   Future<void> _cargarSaldo() async {
-    await Provider.of<BilleteraProvider>(context, listen: false).cargarSaldo();
+    await Provider.of<ChoferBilleteraProvider>(context, listen: false)
+        .cargarSaldo();
   }
 
-  Future<void> _simularEscaneoQR() async {
-    setState(() => _loadingCarga = true);
+  Future<void> _simularGananciaViaje() async {
+    setState(() => _loadingAction = true);
 
     try {
-      // Mostrar diálogo de "escaneando"
-      _mostrarDialogoEscaneo();
+      // Simular ganancia de viaje
+      final provider =
+          Provider.of<ChoferBilleteraProvider>(context, listen: false);
 
-      // Simular escaneo de QR
-      final monto = await _billeteraService.simularEscaneoQR();
+      // Mostrar diálogo de proceso
+      _mostrarDialogoProceso();
 
-      // Cerrar diálogo de escaneo
+      // Simular tiempo de procesamiento
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Cerrar diálogo de proceso
       if (mounted) Navigator.of(context).pop();
 
-      // Mostrar diálogo de confirmación
-      final confirmar = await _mostrarDialogoConfirmacion(monto);
+      // Mostrar confirmación de ganancia
+      final confirmar = await _mostrarDialogoGanancia();
 
       if (confirmar == true) {
-        // Realizar la carga usando el provider
-        final provider = Provider.of<BilleteraProvider>(context, listen: false);
         await provider.cargarCreditos(
-          monto: monto,
-          concepto: 'Recarga mediante código QR',
+          monto: 2.20, // Ganancia después de comisión
+          concepto: 'Ganancia por viaje completado',
         );
 
-        // Mostrar mensaje de éxito
         _mostrarExito(
-            '¡Recarga exitosa! Nuevo saldo: ${provider.saldo?.saldo ?? '0.00'} BOB');
+            '¡Ganancia registrada! Nuevo saldo: ${provider.saldo?.saldo ?? '0.00'} BOB');
       }
     } catch (e) {
-      _mostrarError('Error en la recarga: $e');
+      _mostrarError('Error al procesar ganancia: $e');
     } finally {
-      setState(() => _loadingCarga = false);
+      setState(() => _loadingAction = false);
     }
   }
 
-  void _mostrarDialogoEscaneo() {
+  void _mostrarDialogoProceso() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -78,7 +78,7 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
               color: Color(0xFF197B9C),
             ),
             const SizedBox(height: 16),
-            const Text('Escaneando código QR...'),
+            const Text('Procesando ganancia del viaje...'),
             const SizedBox(height: 8),
             Container(
               width: 120,
@@ -88,7 +88,7 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
-                Icons.qr_code_scanner,
+                Icons.directions_bus,
                 size: 60,
                 color: Color(0xFF197B9C),
               ),
@@ -99,36 +99,53 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
     );
   }
 
-  Future<bool?> _mostrarDialogoConfirmacion(double monto) async {
+  Future<bool?> _mostrarDialogoGanancia() async {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar recarga'),
+        title: const Text('Viaje Completado'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('¿Deseas proceder con la siguiente recarga?'),
+            const Text('¡Felicidades! Has completado un viaje exitosamente.'),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFF197B9C).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  const Text(
-                    'Monto:',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    '${monto.toStringAsFixed(2)} BOB',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF197B9C),
+                  _buildDetalleFila('Tarifa del viaje:', '2.30 BOB'),
+                  const Divider(),
+                  _buildDetalleFila('Comisión de la app:', '0.10 BOB',
+                      color: Colors.red),
+                  const Divider(),
+                  _buildDetalleFila('Tu ganancia:', '2.20 BOB',
+                      color: const Color(0xFF197B9C), isBold: true),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Nuestro modelo: por cada 2.30 BOB que cobras, nosotros nos quedamos con 0.10 BOB.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                      ),
                     ),
                   ),
                 ],
@@ -137,22 +154,55 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF197B9C),
-            ),
-            child: const Text(
-              'Confirmar',
-              style: TextStyle(color: Colors.white),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF197B9C),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'Confirmar',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDetalleFila(String label, String valor,
+      {Color? color, bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: color,
+          ),
+        ),
+        Text(
+          valor,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            color: color ?? Colors.black,
+          ),
+        ),
+      ],
     );
   }
 
@@ -210,19 +260,18 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Mi Billetera',
+                            'Mi Billetera - Chofer',
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
                             ),
                           ),
-                          Consumer<BilleteraProvider>(
-                            builder: (context, billeteraProvider, child) {
+                          Consumer<ChoferBilleteraProvider>(
+                            builder: (context, provider, child) {
                               return IconButton(
-                                onPressed: billeteraProvider.loadingSaldo
-                                    ? null
-                                    : _cargarSaldo,
-                                icon: billeteraProvider.loadingSaldo
+                                onPressed:
+                                    provider.loadingSaldo ? null : _cargarSaldo,
+                                icon: provider.loadingSaldo
                                     ? const SizedBox(
                                         width: 20,
                                         height: 20,
@@ -241,12 +290,12 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Consumer<BilleteraProvider>(
-                        builder: (context, billeteraProvider, child) {
+                      Consumer<ChoferBilleteraProvider>(
+                        builder: (context, provider, child) {
                           return Text(
-                            billeteraProvider.loadingSaldo
+                            provider.loadingSaldo
                                 ? 'Cargando...'
-                                : '${billeteraProvider.saldo?.saldo ?? '0.00'} ${billeteraProvider.saldo?.moneda ?? 'BOB'}',
+                                : '${provider.saldo?.saldo ?? '0.00'} ${provider.saldo?.moneda ?? 'BOB'}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 32,
@@ -257,7 +306,7 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Saldo disponible',
+                        'Ganancias acumuladas',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -270,12 +319,12 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
 
               const SizedBox(height: 24),
 
-              // Botón de cargar saldo
+              // Botón de simular ganancia
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _loadingCarga ? null : _simularEscaneoQR,
-                  icon: _loadingCarga
+                  onPressed: _loadingAction ? null : _simularGananciaViaje,
+                  icon: _loadingAction
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -284,11 +333,11 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Icon(Icons.qr_code_scanner),
+                      : const Icon(Icons.directions_bus),
                   label: Text(
-                    _loadingCarga
+                    _loadingAction
                         ? 'Procesando...'
-                        : 'Escanear QR para recargar',
+                        : 'Simular Ganancia de Viaje',
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF197B9C),
@@ -298,6 +347,78 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 4,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Información del modelo de negocio
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF197B9C).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.business,
+                              color: Color(0xFF197B9C),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Modelo de Negocio',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.blue.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildModeloFila('💰 Tarifa por viaje', '2.30 BOB'),
+                            const SizedBox(height: 8),
+                            _buildModeloFila(
+                                '📱 Comisión de la app', '0.10 BOB'),
+                            const Divider(),
+                            _buildModeloFila('✅ Tu ganancia', '2.20 BOB',
+                                color: const Color(0xFF197B9C), isBold: true),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Como chofer partner, por cada viaje completado recibes el 95.7% de la tarifa. '
+                        'Nosotros mantenemos una pequeña comisión del 4.3% para mantener y mejorar la plataforma.',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -323,21 +444,20 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Consumer<BilleteraProvider>(
-                        builder: (context, billeteraProvider, child) {
-                          if (billeteraProvider.saldo != null) {
+                      Consumer<ChoferBilleteraProvider>(
+                        builder: (context, provider, child) {
+                          if (provider.saldo != null) {
                             return Column(
                               children: [
                                 _buildInfoRow(
                                   'ID de Billetera',
-                                  billeteraProvider.saldo!.billeteraId
-                                      .toString(),
+                                  provider.saldo!.billeteraId.toString(),
                                   Icons.wallet,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildInfoRow(
                                   'Moneda',
-                                  billeteraProvider.saldo!.moneda,
+                                  provider.saldo!.moneda,
                                   Icons.monetization_on,
                                 ),
                                 const SizedBox(height: 12),
@@ -346,6 +466,13 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                                   'Activa',
                                   Icons.check_circle,
                                   valueColor: Colors.green,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildInfoRow(
+                                  'Tipo',
+                                  'Chofer Partner',
+                                  Icons.local_taxi,
+                                  valueColor: const Color(0xFF197B9C),
                                 ),
                               ],
                             );
@@ -363,55 +490,34 @@ class _ClienteBilleteraPageState extends State<ClienteBilleteraPage> {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              // Instrucciones de uso
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: Color(0xFF197B9C),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Cómo recargar',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        '1. Presiona "Escanear QR para recargar"\n'
-                        '2. Espera a que se detecte el código QR\n'
-                        '3. Confirma el monto mostrado\n'
-                        '4. Tu saldo se actualizará automáticamente',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildModeloFila(String label, String valor,
+      {Color? color, bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: color ?? Colors.black87,
+          ),
+        ),
+        Text(
+          valor,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            color: color ?? Colors.black,
+            fontSize: isBold ? 16 : 14,
+          ),
+        ),
+      ],
     );
   }
 

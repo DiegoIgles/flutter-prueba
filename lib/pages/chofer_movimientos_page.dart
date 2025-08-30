@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/movimiento.dart';
-import '../providers/billetera_provider.dart';
+import '../providers/chofer_billetera_provider.dart';
 
-class ClienteMovimientosPage extends StatefulWidget {
-  const ClienteMovimientosPage({super.key});
+class ChoferMovimientosPage extends StatefulWidget {
+  const ChoferMovimientosPage({super.key});
 
   @override
-  State<ClienteMovimientosPage> createState() => _ClienteMovimientosPageState();
+  State<ChoferMovimientosPage> createState() => _ChoferMovimientosPageState();
 }
 
-class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
+class _ChoferMovimientosPageState extends State<ChoferMovimientosPage> {
   @override
   void initState() {
     super.initState();
     // Cargar movimientos usando el provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<BilleteraProvider>(context, listen: false);
+      final provider =
+          Provider.of<ChoferBilleteraProvider>(context, listen: false);
       if (provider.movimientos.isEmpty && !provider.loadingMovimientos) {
         provider.cargarMovimientos();
       }
@@ -24,7 +25,7 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
   }
 
   Future<void> _cargarMovimientos() async {
-    await Provider.of<BilleteraProvider>(context, listen: false)
+    await Provider.of<ChoferBilleteraProvider>(context, listen: false)
         .cargarMovimientos();
   }
 
@@ -34,9 +35,9 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
       body: RefreshIndicator(
         onRefresh: _cargarMovimientos,
         color: const Color(0xFF197B9C),
-        child: Consumer<BilleteraProvider>(
-          builder: (context, billeteraProvider, child) {
-            if (billeteraProvider.loadingMovimientos) {
+        child: Consumer<ChoferBilleteraProvider>(
+          builder: (context, provider, child) {
+            if (provider.loadingMovimientos) {
               return const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFF197B9C),
@@ -44,15 +45,15 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
               );
             }
 
-            if (billeteraProvider.errorMovimientos != null) {
-              return _buildErrorState(billeteraProvider.errorMovimientos!);
+            if (provider.errorMovimientos != null) {
+              return _buildErrorState(provider.errorMovimientos!);
             }
 
-            if (billeteraProvider.movimientos.isEmpty) {
+            if (provider.movimientos.isEmpty) {
               return _buildEmptyState();
             }
 
-            return _buildMovimientosList(billeteraProvider.movimientos);
+            return _buildMovimientosList(provider.movimientos);
           },
         ),
       ),
@@ -84,7 +85,7 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Aquí aparecerán tus recargas, pagos de viajes y otros movimientos de tu billetera.',
+                'Aquí aparecerán tus ganancias por viajes, retiros y otros movimientos de tu billetera.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -117,13 +118,22 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
   }
 
   Widget _buildMovimientosList(List<Movimiento> movimientos) {
+    // Calcular estadísticas
+    final totalGanancias = movimientos
+        .where((m) => m.monto > 0)
+        .fold(0.0, (sum, m) => sum + m.monto);
+
+    final totalRetiros = movimientos
+        .where((m) => m.monto < 0)
+        .fold(0.0, (sum, m) => sum + m.monto.abs());
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Resumen
+          // Tarjeta de resumen con estadísticas
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
@@ -159,13 +169,27 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Historial completo',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildEstadistica(
+                          'Ganancias',
+                          '+${totalGanancias.toStringAsFixed(2)} BOB',
+                          Icons.trending_up,
+                          Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildEstadistica(
+                          'Retiros',
+                          '-${totalRetiros.toStringAsFixed(2)} BOB',
+                          Icons.trending_down,
+                          Colors.orange,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -197,7 +221,7 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
 
           const SizedBox(height: 20),
 
-          // Nota informativa
+          // Nota informativa para choferes
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(
@@ -205,25 +229,74 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.blue[600],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Los movimientos se muestran en tiempo real. Desliza hacia abajo para actualizar.',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.blue[600],
+                        size: 20,
                       ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Información para choferes',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '• Las ganancias por viajes se registran automáticamente\n'
+                    '• Puedes retirar tu saldo cuando desees\n'
+                    '• Los movimientos se actualizan en tiempo real\n'
+                    '• Mantén actualizada tu información de retiro',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      height: 1.5,
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadistica(
+      String titulo, String valor, IconData icono, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icono, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            titulo,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            valor,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -293,6 +366,26 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
     final color = esPositivo ? Colors.green : Colors.red;
     final icono = esPositivo ? Icons.add_circle : Icons.remove_circle;
 
+    // Determinar tipo específico para chofer
+    String tipoEspecifico = movimiento.tipoDisplayName;
+    IconData iconoEspecifico = icono;
+
+    if (esPositivo) {
+      if (movimiento.tipo == 'GANANCIA' ||
+          movimiento.concepto?.contains('viaje') == true) {
+        tipoEspecifico = 'Ganancia por viaje';
+        iconoEspecifico = Icons.directions_bus;
+      } else if (movimiento.tipo == 'RECARGA') {
+        tipoEspecifico = 'Ingreso';
+        iconoEspecifico = Icons.account_balance_wallet;
+      }
+    } else {
+      if (movimiento.tipo == 'RETIRO') {
+        tipoEspecifico = 'Retiro';
+        iconoEspecifico = Icons.money_off;
+      }
+    }
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -302,13 +395,13 @@ class _ClienteMovimientosPageState extends State<ClienteMovimientosPage> {
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.1),
           child: Icon(
-            icono,
+            iconoEspecifico,
             color: color,
             size: 24,
           ),
         ),
         title: Text(
-          movimiento.tipoDisplayName,
+          tipoEspecifico,
           style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
