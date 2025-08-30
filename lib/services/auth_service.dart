@@ -115,4 +115,26 @@ class AuthService {
       rethrow;
     }
   }
+  Map<String, dynamic> _decodeJwtPayload(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) throw Exception('Token JWT inválido');
+    final normalized = base64Url.normalize(parts[1]);
+    final payload = utf8.decode(base64Url.decode(normalized));
+    return jsonDecode(payload) as Map<String, dynamic>;
+  }
+
+  Future<int?> getChoferIdFromToken() async {
+    final token = await getToken(chofer: true);
+    if (token == null || token.isEmpty) return null;
+
+    final payload = _decodeJwtPayload(token);
+    final sub = payload['sub'];
+    if (sub is Map && sub['sub'] != null) {
+      return int.tryParse(sub['sub'].toString());
+    }
+    if (payload['sub'] != null) {
+      return int.tryParse(payload['sub'].toString());
+    }
+    return null;
+  }
 }

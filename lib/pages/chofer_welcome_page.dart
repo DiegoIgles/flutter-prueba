@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:prueba/models/tipo_vehiculo.dart';
+import 'package:prueba/services/auth_service.dart';
+import 'package:prueba/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
 
@@ -12,6 +15,13 @@ class ChoferWelcomePage extends StatefulWidget {
 
 class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
   final _vehiculoService = VehiculoService();
+  final _auth = AuthService();
+  final _viajeService = ViajeService(); // NUEVO
+
+  int? _viajeIdActual; // NUEVO
+  int? _vehiculoEnViaje; // NUEVO (para marcar card activa)
+  String? _montoActual; // opcional, mostrado al iniciar
+  bool _accionando = false; // evita taps múltiples
   late Future<List<Vehiculo>> _future;
 
   @override
@@ -25,6 +35,251 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
       _future = _vehiculoService.listarMisVehiculos();
     });
     await _future; // asegura que termine antes de soltar el refresh
+  }
+
+  Future<void> _iniciarViaje(int vehiculoId) async {
+    if (_accionando) return;
+    setState(() => _accionando = true);
+    try {
+      final r = await _viajeService.start(vehiculoId);
+      setState(() {
+        _viajeIdActual = r.viajeId;
+        _vehiculoEnViaje = vehiculoId;
+        _montoActual = r.monto;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                '🚀 Viaje iniciado (ID ${r.viajeId}) — Monto: ${r.monto}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo iniciar viaje: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _accionando = false);
+    }
+  }
+
+  Future<void> _finalizarViaje() async {
+    if (_accionando || _viajeIdActual == null) return;
+    setState(() => _accionando = true);
+    try {
+      final r = await _viajeService.finish(_viajeIdActual!);
+      setState(() {
+        _viajeIdActual = null;
+        _vehiculoEnViaje = null;
+        _montoActual = null;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('🏁 Viaje finalizado — Estado: ${r.estado}')),
+      );
+      await _reload(); // refresca por si cambia algo server-side
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo finalizar viaje: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _accionando = false);
+    }
+  }
+
+  Future<void> _openCrearVehiculo() async {
+    // 1) Traer tipos
+    late List<TipoVehiculo> tipos;
+    try {
+      tipos = await _vehiculoService.listarTipos();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo cargar tipos: $e')),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    // 2) Controllers y estado local del form
+    final placaCtrl = TextEditingController();
+    final marcaCtrl = TextEditingController();
+    final modeloCtrl = TextEditingController();
+    final anioCtrl =
+        TextEditingController(text: DateTime.now().year.toString());
+    final capacidadCtrl = TextEditingController(text: '1');
+
+    String estado = 'activo';
+    TipoVehiculo? tipoSel = tipos.isNotEmpty ? tipos.first : null;
+    final formKey = GlobalKey<FormState>();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final bottom = MediaQuery.of(ctx).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + 16),
+          child: StatefulBuilder(
+            builder: (context, setSheet) {
+              return SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Center(
+                        child: Text('Nuevo vehículo',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: placaCtrl,
+                        decoration: const InputDecoration(labelText: 'Placa'),
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Ingrese la placa'
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: marcaCtrl,
+                        decoration: const InputDecoration(labelText: 'Marca'),
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Ingrese la marca'
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: modeloCtrl,
+                        decoration: const InputDecoration(labelText: 'Modelo'),
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Ingrese el modelo'
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: anioCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Año'),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Ingrese el año';
+                          final n = int.tryParse(v);
+                          if (n == null ||
+                              n < 1900 ||
+                              n > DateTime.now().year + 1) {
+                            return 'Año inválido';
+                          }
+                          return null;
+                        },
+                      ),
+                      TextFormField(
+                        controller: capacidadCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            const InputDecoration(labelText: 'Capacidad'),
+                        validator: (v) {
+                          if (v == null || v.isEmpty)
+                            return 'Ingrese la capacidad';
+                          final n = int.tryParse(v);
+                          if (n == null || n <= 0) return 'Capacidad inválida';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: estado,
+                        decoration: const InputDecoration(labelText: 'Estado'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'activo', child: Text('Activo')),
+                          DropdownMenuItem(
+                              value: 'inactivo', child: Text('Inactivo')),
+                          DropdownMenuItem(
+                              value: 'mantenimiento',
+                              child: Text('Mantenimiento')),
+                        ],
+                        onChanged: (val) =>
+                            setSheet(() => estado = val ?? 'activo'),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<TipoVehiculo>(
+                        value: tipoSel,
+                        decoration: const InputDecoration(
+                            labelText: 'Tipo de vehículo'),
+                        items: tipos
+                            .map((t) => DropdownMenuItem(
+                                value: t, child: Text(t.nombre)))
+                            .toList(),
+                        onChanged: (val) => setSheet(() => tipoSel = val),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.save),
+                          label: const Text('Guardar'),
+                          onPressed: () async {
+                            if (!formKey.currentState!.validate()) return;
+                            if (tipoSel == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Seleccione un tipo de vehículo')),
+                              );
+                              return;
+                            }
+
+                            // 3) Obtener chofer_id desde el token guardado
+                            final choferId = await _auth.getChoferIdFromToken();
+                            if (choferId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'No se pudo obtener tu ID de chofer. Inicia sesión nuevamente.')),
+                              );
+                              return;
+                            }
+
+                            try {
+                              await _vehiculoService.crearVehiculo(
+                                placa: placaCtrl.text.trim(),
+                                marca: marcaCtrl.text.trim(),
+                                modelo: modeloCtrl.text.trim(),
+                                anio: int.parse(anioCtrl.text.trim()),
+                                capacidad: int.parse(capacidadCtrl.text.trim()),
+                                estado: estado,
+                                tipoId: tipoSel!.id,
+                                choferId: choferId,
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(context); // cerrar modal
+                              await _reload(); // refrescar el listado
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Vehículo creado correctamente')),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('Error al crear vehículo: $e')),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   Color _estadoColor(String estado) {
@@ -103,11 +358,13 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
                         ),
                         const SizedBox(width: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: estadoColor.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: estadoColor.withOpacity(0.5)),
+                            border:
+                                Border.all(color: estadoColor.withOpacity(0.5)),
                           ),
                           child: Text(
                             v.estado.toUpperCase(),
@@ -141,8 +398,36 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
                       runSpacing: 8,
                       children: [
                         _chip('Año ${v.anio}', Icons.event),
-                        _chip('Cap. ${v.capacidad}', Icons.airline_seat_recline_normal),
+                        _chip('Cap. ${v.capacidad}',
+                            Icons.airline_seat_recline_normal),
                         _chip('Tipo #${v.tipoId}', Icons.category),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        if (_vehiculoEnViaje == v.id)
+                          ElevatedButton.icon(
+                            onPressed: _accionando ? null : _finalizarViaje,
+                            icon: const Icon(Icons.stop),
+                            label: const Text('Finalizar viaje'),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFD32F2F)),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed:
+                                _accionando ? null : () => _iniciarViaje(v.id),
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Iniciar viaje'),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2E7D32)),
+                          ),
+                        const SizedBox(width: 12),
+                        if (_vehiculoEnViaje == v.id && _montoActual != null)
+                          Text('Monto: $_montoActual',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ],
@@ -166,16 +451,19 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
         backgroundColor: topColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Panel Chofer', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Panel Chofer', style: TextStyle(color: Colors.white)),
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: FutureBuilder<List<Vehiculo>>(
           future: _future,
           builder: (context, snapshot) {
+            // ... TU MISMO BUILDER SIN CAMBIOS ...
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const ListTile(
-                title: Center(child: Padding(
+                title: Center(
+                    child: Padding(
                   padding: EdgeInsets.only(top: 40),
                   child: CircularProgressIndicator(),
                 )),
@@ -185,7 +473,7 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
               return ListView(
                 children: [
                   const SizedBox(height: 40),
-                  Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+                  Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
                   const SizedBox(height: 12),
                   Center(
                     child: Padding(
@@ -212,12 +500,14 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
               return ListView(
                 children: const [
                   SizedBox(height: 60),
-                  Icon(Icons.directions_bus_filled, size: 64, color: Colors.grey),
+                  Icon(Icons.directions_bus_filled,
+                      size: 64, color: Colors.grey),
                   SizedBox(height: 12),
                   Center(
                     child: Text(
                       'No tienes vehículos asignados.',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                   SizedBox(height: 8),
@@ -240,6 +530,11 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
             );
           },
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openCrearVehiculo, // NUEVO
+        icon: const Icon(Icons.add),
+        label: const Text('Nuevo vehículo'),
       ),
     );
   }
