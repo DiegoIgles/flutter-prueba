@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/login_request.dart';
 import '../models/token_response.dart';
+import '../models/cliente_create.dart';
+import '../models/cliente.dart';
 
 class AuthService {
   static const String _baseUrl = 'http://11.0.1.176:8000/api';
@@ -33,6 +35,37 @@ class AuthService {
       }
     } catch (e) {
       print('🚨 Error en loginCliente: $e');
+      rethrow;
+    }
+  }
+
+  Future<Cliente> registerCliente(ClienteCreate req) async {
+    final uri = Uri.parse('$_baseUrl/clientes/register');
+
+    print('🌐 Enviando POST a $uri...');
+    print('📤 Payload: ${jsonEncode(req.toJson())}');
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode(req.toJson()),
+      );
+
+      print('📥 StatusCode: ${res.statusCode}');
+      print('📥 Body: ${res.body}');
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final Map<String, dynamic> body = jsonDecode(res.body);
+        final cliente = Cliente.fromJson(body);
+
+        print('✅ Cliente registrado: ${cliente.nombre}');
+        return cliente;
+      } else {
+        throw Exception('❌ Error ${res.statusCode}: ${res.body}');
+      }
+    } catch (e) {
+      print('🚨 Error en registerCliente: $e');
       rethrow;
     }
   }
