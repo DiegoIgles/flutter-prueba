@@ -86,10 +86,10 @@ class HomePage extends StatelessWidget {
                     label: 'Chofer',
                     color: purple,
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Login de chofer aún no implementado')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ChoferLoginPage()),
                       );
                     },
                   ),

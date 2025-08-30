@@ -85,4 +85,34 @@ class AuthService {
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
+  Future<Cliente> registerCliente(ClienteCreate req) async {
+    final uri = Uri.parse('$baseUrl/clientes/register');
+
+    print('🌐 Enviando POST a $uri...');
+    print('📤 Payload: ${jsonEncode(req.toJson())}');
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode(req.toJson()),
+      );
+
+      print('📥 StatusCode: ${res.statusCode}');
+      print('📥 Body: ${res.body}');
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final Map<String, dynamic> body = jsonDecode(res.body);
+        final cliente = Cliente.fromJson(body);
+
+        print('✅ Cliente registrado: ${cliente.nombre}');
+        return cliente;
+      } else {
+        throw Exception('❌ Error ${res.statusCode}: ${res.body}');
+      }
+    } catch (e) {
+      print('🚨 Error en registerCliente: $e');
+      rethrow;
+    }
+  }
 }
