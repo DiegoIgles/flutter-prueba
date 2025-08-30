@@ -12,6 +12,8 @@ class ChoferMisVehiculosPage extends StatefulWidget {
   @override
   State<ChoferMisVehiculosPage> createState() => _ChoferMisVehiculosPageState();
 }
+Map<int, String> _tipoNombre = {};
+bool _cargandoTipos = true;
 
 class _ChoferMisVehiculosPageState extends State<ChoferMisVehiculosPage> {
   final _vehiculoService = VehiculoService();
@@ -25,10 +27,23 @@ class _ChoferMisVehiculosPageState extends State<ChoferMisVehiculosPage> {
   late Future<List<Vehiculo>> _future;
 
   @override
-  void initState() {
-    super.initState();
-    _future = _vehiculoService.listarMisVehiculos();
+void initState() {
+  super.initState();
+  _future = _vehiculoService.listarMisVehiculos();
+  _cargarTipos();
+}
+
+Future<void> _cargarTipos() async {
+  try {
+    final tipos = await _vehiculoService.listarTipos();
+    setState(() {
+      _tipoNombre = {for (final t in tipos) t.id: t.nombre};
+      _cargandoTipos = false;
+    });
+  } catch (e) {
+    setState(() => _cargandoTipos = false);
   }
+}
 
   Future<void> _reload() async {
     setState(() {
@@ -530,7 +545,13 @@ class _ChoferMisVehiculosPageState extends State<ChoferMisVehiculosPage> {
                     _buildChip('Año ${v.anio}', Icons.event, isEnViaje),
                     _buildChip('Cap. ${v.capacidad}',
                         Icons.airline_seat_recline_normal, isEnViaje),
-                    _buildChip('Tipo #${v.tipoId}', Icons.category, isEnViaje),
+                    _buildChip(
+                      _cargandoTipos
+                          ? 'Tipo…'
+                          : (_tipoNombre[v.tipoId] ?? 'Tipo #${v.tipoId}'),
+                      Icons.category,
+                      isEnViaje,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
