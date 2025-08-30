@@ -15,6 +15,9 @@ class ChoferWelcomePage extends StatefulWidget {
   State<ChoferWelcomePage> createState() => _ChoferWelcomePageState();
 }
 
+Map<int, String> _tipoNombre = {};
+bool _cargandoTipos = true;
+
 class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
   final _vehiculoService = VehiculoService();
   final _auth = AuthService();
@@ -30,6 +33,21 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
   void initState() {
     super.initState();
     _future = _vehiculoService.listarMisVehiculos();
+    _cargarTipos();
+  }
+
+  Future<void> _cargarTipos() async {
+    try {
+      final tipos = await _vehiculoService.listarTipos();
+      setState(() {
+        _tipoNombre = {for (final t in tipos) t.id: t.nombre};
+        _cargandoTipos = false;
+      });
+    } catch (e) {
+      setState(() => _cargandoTipos = false);
+      // (opcional) Mostrar un snackbar si quieres avisar
+      // ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar tipos: $e')));
+    }
   }
 
   Future<void> _reload() async {
@@ -406,7 +424,12 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
                         _chip('Año ${v.anio}', Icons.event),
                         _chip('Cap. ${v.capacidad}',
                             Icons.airline_seat_recline_normal),
-                        _chip('Tipo #${v.tipoId}', Icons.category),
+                        _chip(
+                          _cargandoTipos
+                              ? 'Tipo…'
+                              : (_tipoNombre[v.tipoId] ?? 'Tipo ${v.tipoId}'),
+                          Icons.category,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
