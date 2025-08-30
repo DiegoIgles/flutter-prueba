@@ -139,4 +139,66 @@ class AuthService {
     }
     return null;
   }
+
+  Future<int?> getClienteIdFromToken() async {
+    final token = await getToken(chofer: false);
+    print('🔐 Token para cliente: ${token?.substring(0, 50)}...');
+
+    if (token == null || token.isEmpty) {
+      print('❌ Token es null o vacío');
+      return null;
+    }
+
+    try {
+      final payload = _decodeJwtPayload(token);
+      print('📋 Payload decodificado: $payload');
+
+      final sub = payload['sub'];
+      print('🔍 Sub encontrado: $sub (tipo: ${sub.runtimeType})');
+
+      if (sub is Map && sub['sub'] != null) {
+        final clienteId = int.tryParse(sub['sub'].toString());
+        print('✅ Cliente ID desde sub.sub: $clienteId');
+        return clienteId;
+      }
+      if (payload['sub'] != null) {
+        final clienteId = int.tryParse(payload['sub'].toString());
+        print('✅ Cliente ID desde sub: $clienteId');
+        return clienteId;
+      }
+      if (payload['cliente_id'] != null) {
+        final clienteId = int.tryParse(payload['cliente_id'].toString());
+        print('✅ Cliente ID desde cliente_id: $clienteId');
+        return clienteId;
+      }
+      print('❌ No se pudo extraer cliente ID del payload');
+      return null;
+    } catch (e) {
+      print('🚨 Error decodificando token cliente: $e');
+      return null;
+    }
+  }
+
+  Future<Cliente?> getCurrentCliente() async {
+    final clienteId = await getClienteIdFromToken();
+    if (clienteId == null) return null;
+
+    try {
+      final uri = Uri.parse('$baseUrl/clientes/$clienteId');
+      final headers = await authHeaders(chofer: false);
+
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        return Cliente.fromJson(data);
+      } else {
+        print('❌ Error obteniendo cliente: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('🚨 Error en getCurrentCliente: $e');
+      return null;
+    }
+  }
 }
