@@ -4,6 +4,7 @@ import 'package:prueba/services/auth_service.dart';
 import 'package:prueba/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
+import 'package:prueba/widgets/sidebartChofer.dart'; // Asegúrate que esta ruta esté correcta
 
 class ChoferWelcomePage extends StatefulWidget {
   final String token;
@@ -406,28 +407,42 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        if (_vehiculoEnViaje == v.id)
-                          ElevatedButton.icon(
-                            onPressed: _accionando ? null : _finalizarViaje,
-                            icon: const Icon(Icons.stop),
-                            label: const Text('Finalizar viaje'),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFD32F2F)),
-                          )
-                        else
-                          ElevatedButton.icon(
-                            onPressed:
-                                _accionando ? null : () => _iniciarViaje(v.id),
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text('Iniciar viaje'),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32)),
+                        ElevatedButton.icon(
+                          onPressed: _accionando
+                              ? null
+                              : (_vehiculoEnViaje == v.id
+                                  ? _finalizarViaje
+                                  : () => _iniciarViaje(v.id)),
+                          icon: Icon(_vehiculoEnViaje == v.id
+                              ? Icons.stop
+                              : Icons.play_arrow),
+                          label: Text(
+                              _vehiculoEnViaje == v.id
+                                  ? 'Finalizar'
+                                  : 'Iniciar',
+                              style: const TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _vehiculoEnViaje == v.id
+                                ? const Color(0xFFD32F2F)
+                                : const Color(0xFF2E7D32),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
                           ),
+                        ),
                         const SizedBox(width: 12),
                         if (_vehiculoEnViaje == v.id && _montoActual != null)
-                          Text('Monto: $_montoActual',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700)),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                'Monto: $_montoActual',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -454,6 +469,7 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
         title:
             const Text('Panel Chofer', style: TextStyle(color: Colors.white)),
       ),
+      drawer: const AppSidebarChofer(), // Asegúrate de pasar el ID correcto
       body: RefreshIndicator(
         onRefresh: _reload,
         child: FutureBuilder<List<Vehiculo>>(

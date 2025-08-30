@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:prueba/pages/home_page.dart';
 
-class AppSidebar extends StatelessWidget {
-  const AppSidebar({super.key});
+class AppSidebarChofer extends StatelessWidget {
+  const AppSidebarChofer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class AppSidebar extends StatelessWidget {
             _item(
               context,
               icon: Icons.home_outlined,
-              text: 'Inicio',
+              text: 'Vehiculos',
               onTap: () => Navigator.pop(context),
             ),
             _item(
@@ -31,7 +31,7 @@ class AppSidebar extends StatelessWidget {
             _item(
               context,
               icon: Icons.history,
-              text: 'Mis viajes',
+              text: 'Dashboard',
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Navigator.pushNamed(context, '/viajes');
