@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/login_request.dart';
 import '../models/token_response.dart';
 import '../models/cliente_create.dart';
 import '../models/cliente.dart';
 
 class AuthService {
-  // Ajusta según emulador/dispositivo
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String baseUrl = 'http://11.0.1.203:8000/api';
 
-  static const _storage = FlutterSecureStorage();
+  // Almacén temporal de tokens en memoria
+  static String? _tokenCliente;
+  static String? _tokenChofer;
 
   Future<TokenResponse> loginCliente(LoginRequest req) async {
     final uri = Uri.parse('$baseUrl/clientes/login');
@@ -29,7 +29,8 @@ class AuthService {
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final tokenRes = TokenResponse.fromJson(jsonDecode(res.body));
-        print('✅ Token recibido (cliente): ${tokenRes.accessToken}');
+        _tokenCliente = tokenRes.accessToken;
+        print('✅ Token recibido (cliente): $_tokenCliente');
         return tokenRes;
       } else {
         throw Exception('❌ Error ${res.statusCode}: ${res.body}');
@@ -41,7 +42,6 @@ class AuthService {
   }
 
   Future<TokenResponse> loginChofer(LoginRequest req) async {
-    // Cambia el path si tu backend usa otro (p.ej. /drivers/login)
     final uri = Uri.parse('$baseUrl/login');
 
     print('🌐 POST $uri');
@@ -58,24 +58,24 @@ class AuthService {
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       final tokenRes = TokenResponse.fromJson(jsonDecode(res.body));
-      await _saveToken('token_chofer', tokenRes);
-      print('✅ Token CHOFER guardado');
+      _tokenChofer = tokenRes.accessToken;
+      print('✅ Token CHOFER recibido');
       return tokenRes;
     } else {
       throw Exception('❌ Error ${res.statusCode}: ${res.body}');
     }
   }
 
-  Future<void> _saveToken(String key, TokenResponse token) async {
-    await _storage.write(key: key, value: token.accessToken);
-  }
-
   Future<String?> getToken({required bool chofer}) async {
-    return _storage.read(key: chofer ? 'token_chofer' : 'token_cliente');
+    return chofer ? _tokenChofer : _tokenCliente;
   }
 
   Future<void> logout({required bool chofer}) async {
-    await _storage.delete(key: chofer ? 'token_chofer' : 'token_cliente');
+    if (chofer) {
+      _tokenChofer = null;
+    } else {
+      _tokenCliente = null;
+    }
   }
 
   Future<Map<String, String>> authHeaders({required bool chofer}) async {
@@ -85,6 +85,7 @@ class AuthService {
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
+
   Future<Cliente> registerCliente(ClienteCreate req) async {
     final uri = Uri.parse('$baseUrl/clientes/register');
 
@@ -115,6 +116,7 @@ class AuthService {
       rethrow;
     }
   }
+
   Map<String, dynamic> _decodeJwtPayload(String token) {
     final parts = token.split('.');
     if (parts.length != 3) throw Exception('Token JWT inválido');
