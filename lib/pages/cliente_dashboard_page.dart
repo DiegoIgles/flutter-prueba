@@ -6,6 +6,7 @@ import '../providers/billetera_provider.dart';
 import 'cliente_billetera_page.dart';
 import 'cliente_perfil_page.dart';
 import 'cliente_movimientos_page.dart';
+import 'package:prueba/widgets/ubicacion_modal.dart';
 
 class ClienteDashboardPage extends StatefulWidget {
   final String token;
@@ -44,6 +45,16 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
     _simularProximidadChofer(); // Simular detección de chofer cercano
   }
 
+  void _mostrarUbicacionModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const UbicacionModal(),
+    );
+  }
+
   void _initializePages() {
     _pages.addAll([
       _buildHomePage(),
@@ -70,14 +81,14 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.directions_car, color: Color(0xFF197B9C)),
             SizedBox(width: 8),
             Text('Chofer detectado'),
           ],
         ),
-        content: Text(
+        content: const Text(
           'Hay un chofer cerca de tu ubicación. ¿Deseas realizar un pago?',
         ),
         actions: [
@@ -86,7 +97,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
               Navigator.of(context).pop();
               setState(() => _choferCercano = false);
             },
-            child: Text('Más tarde'),
+            child: const Text('Más tarde'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -94,9 +105,10 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
               _procesarPagoChofer();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF197B9C),
+              backgroundColor: const Color(0xFF197B9C),
             ),
-            child: Text('Pagar ahora', style: TextStyle(color: Colors.white)),
+            child: const Text('Pagar ahora',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -108,15 +120,15 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Pago procesado'),
-        content: Text('El pago al chofer se ha realizado exitosamente.'),
+        title: const Text('Pago procesado'),
+        content: const Text('El pago al chofer se ha realizado exitosamente.'),
         actions: [
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               _refrescarSaldo(); // Actualizar saldo
             },
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -287,7 +299,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.directions_car,
                       color: Colors.orange,
                       size: 32,
@@ -318,7 +330,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
                     ),
                     IconButton(
                       onPressed: _mostrarAlertaChoferCercano,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.payment,
                         color: Colors.orange,
                       ),
@@ -359,6 +371,19 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _mostrarUbicacionModal,
+            icon: const Icon(Icons.my_location),
+            label: const Text('Ver ubicación en tiempo real'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF197B9C),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
           ),
         ],
       ),
