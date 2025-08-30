@@ -1,25 +1,34 @@
 import 'package:flutter/foundation.dart';
 import '../services/billetera_service.dart';
 import '../models/billetera.dart';
+import '../models/movimiento.dart';
 
 class BilleteraProvider extends ChangeNotifier {
   final BilleteraService _billeteraService = BilleteraService();
-  
+
   BilleteraSaldoResponse? _saldo;
   bool _loadingSaldo = false;
   String? _error;
-  
+
+  List<Movimiento> _movimientos = [];
+  bool _loadingMovimientos = false;
+  String? _errorMovimientos;
+
   BilleteraSaldoResponse? get saldo => _saldo;
   bool get loadingSaldo => _loadingSaldo;
   String? get error => _error;
-  
+
+  List<Movimiento> get movimientos => _movimientos;
+  bool get loadingMovimientos => _loadingMovimientos;
+  String? get errorMovimientos => _errorMovimientos;
+
   Future<void> cargarSaldo() async {
     if (_loadingSaldo) return; // Evitar múltiples cargas simultáneas
-    
+
     _loadingSaldo = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       final clienteId = await _billeteraService.getClienteIdFromToken();
       if (clienteId != null) {
@@ -37,7 +46,7 @@ class BilleteraProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<void> cargarCreditos({
     required double monto,
     required String concepto,
@@ -45,14 +54,14 @@ class BilleteraProvider extends ChangeNotifier {
     if (_saldo == null) {
       throw Exception('No hay información de billetera disponible');
     }
-    
+
     try {
       final resultado = await _billeteraService.cargarSaldo(
         billeteraId: _saldo!.billeteraId,
         monto: monto,
         concepto: concepto,
       );
-      
+
       // Actualizar el saldo local
       _saldo = BilleteraSaldoResponse(
         ok: true,
@@ -60,16 +69,49 @@ class BilleteraProvider extends ChangeNotifier {
         saldo: resultado.saldo,
         moneda: _saldo!.moneda,
       );
-      
+
       notifyListeners();
+
+      // Recargar movimientos después de agregar créditos
+      await cargarMovimientos();
     } catch (e) {
       print('🚨 Error cargando créditos: $e');
       rethrow;
     }
   }
-  
+
+  Future<void> cargarMovimientos() async {
+    if (_loadingMovimientos) return; // Evitar múltiples cargas simultáneas
+
+    _loadingMovimientos = true;
+    _errorMovimientos = null;
+    notifyListeners();
+
+    try {
+      final clienteId = await _billeteraService.getClienteIdFromToken();
+      if (clienteId != null) {
+        final movimientos = await _billeteraService.getMovimientos(clienteId);
+        _movimientos = movimientos;
+        _errorMovimientos = null;
+      } else {
+        _errorMovimientos = 'No se pudo obtener el ID del cliente';
+      }
+    } catch (e) {
+      _errorMovimientos = 'Error al cargar movimientos: $e';
+      print('🚨 Error en cargarMovimientos: $e');
+    } finally {
+      _loadingMovimientos = false;
+      notifyListeners();
+    }
+  }
+
   void clearError() {
     _error = null;
+    notifyListeners();
+  }
+
+  void clearErrorMovimientos() {
+    _errorMovimientos = null;
     notifyListeners();
   }
 }
