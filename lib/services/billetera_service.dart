@@ -87,12 +87,29 @@ class BilleteraService {
     return monto;
   }
 
-  // Método placeholder para obtener historial de movimientos
-  Future<List<Movimiento>> getMovimientos(int billeteraId) async {
-    // TODO: Implementar cuando esté disponible el endpoint
-    // Por ahora retorna lista vacía
-    print('📋 Obteniendo movimientos para billetera $billeteraId...');
-    return [];
+  // Método para obtener historial de movimientos
+  Future<List<Movimiento>> getMovimientos(int clienteId) async {
+    final uri = Uri.parse('$baseUrl/movimientos/$clienteId');
+
+    print('📋 Obteniendo movimientos para cliente $clienteId...');
+
+    try {
+      final headers = await _authService.authHeaders(chofer: false);
+      final response = await http.get(uri, headers: headers);
+
+      print('📥 StatusCode: ${response.statusCode}');
+      print('📥 Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => Movimiento.fromJson(json)).toList();
+      } else {
+        throw Exception('Error ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('🚨 Error en getMovimientos: $e');
+      rethrow;
+    }
   }
 
   // Método para extraer cliente ID del token usando AuthService
