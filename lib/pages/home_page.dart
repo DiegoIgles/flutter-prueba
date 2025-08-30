@@ -44,13 +44,30 @@ class HomePage extends StatelessWidget {
           ),
         ),
         child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const Text(
+                    'Bienvenido',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D2D2D),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Selecciona tu tipo de usuario',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
                   _RoleCard(
                     icon: Icons.person,
                     label: 'Cliente',
@@ -63,15 +80,16 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
+                  const SizedBox(height: 24),
                   _RoleCard(
                     icon: Icons.drive_eta,
                     label: 'Chofer',
                     color: purple,
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ChoferLoginPage()),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text('Login de chofer aún no implementado')),
                       );
                     },
                   ),
@@ -100,47 +118,74 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 90,
-          height: 90,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 16,
-                offset: const Offset(0, 12),
-                color: Colors.black.withOpacity(0.15),
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.12),
+          ),
+          BoxShadow(
+            blurRadius: 40,
+            offset: const Offset(0, 16),
+            color: Colors.black.withOpacity(0.08),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade800,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                    color: Colors.black.withOpacity(0.15),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Icon(icon, size: 56, color: Colors.grey.shade800),
-        ),
-        const SizedBox(height: 12),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color,
-            foregroundColor: Colors.white,
-            elevation: 4,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              child: Icon(icon, size: 50, color: Colors.white),
             ),
-            shadowColor: Colors.black.withOpacity(0.35),
-          ),
-          onPressed: onTap,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  shadowColor: Colors.transparent,
+                ),
+                onPressed: onTap,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

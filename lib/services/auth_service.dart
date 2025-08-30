@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/login_request.dart';
 import '../models/token_response.dart';
+import '../models/cliente_create.dart';
+import '../models/cliente.dart';
 
 class AuthService {
   // Ajusta según emulador/dispositivo
