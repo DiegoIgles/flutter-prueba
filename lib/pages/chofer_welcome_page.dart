@@ -5,6 +5,7 @@ import 'package:prueba/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
 import 'package:prueba/widgets/sidebartChofer.dart'; // Asegúrate que esta ruta esté correcta
+import 'package:prueba/pages/ViajeDetallePage.dart';
 
 class ChoferWelcomePage extends StatefulWidget {
   final String token;
@@ -49,10 +50,14 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
         _montoActual = r.monto;
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                '🚀 Viaje iniciado (ID ${r.viajeId}) — Monto: ${r.monto}')),
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ViajeDetallePage(
+            viajeId: r.viajeId,
+            monto: r.monto,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
