@@ -485,98 +485,190 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    const topColor = Color(0xFF0B0530);
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: topColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title:
-            const Text('Panel Chofer', style: TextStyle(color: Colors.white)),
+  Widget _buildCustomHeader(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 15,
+        left: 20,
+        right: 20,
+        bottom: 20,
       ),
-      drawer: const AppSidebarChofer(), // Asegúrate de pasar el ID correcto
-      body: RefreshIndicator(
-        onRefresh: _reload,
-        child: FutureBuilder<List<Vehiculo>>(
-          future: _future,
-          builder: (context, snapshot) {
-            // ... TU MISMO BUILDER SIN CAMBIOS ...
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const ListTile(
-                title: Center(
-                    child: Padding(
-                  padding: EdgeInsets.only(top: 40),
-                  child: CircularProgressIndicator(),
-                )),
-              );
-            }
-            if (snapshot.hasError) {
-              return ListView(
-                children: [
-                  const SizedBox(height: 40),
-                  Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Ocurrió un error al cargar tus vehículos:\n${snapshot.error}',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: _reload,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
-                    ),
-                  ),
-                ],
-              );
-            }
-            final items = snapshot.data ?? [];
-            if (items.isEmpty) {
-              return ListView(
-                children: const [
-                  SizedBox(height: 60),
-                  Icon(Icons.directions_bus_filled,
-                      size: 64, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Center(
-                    child: Text(
-                      'No tienes vehículos asignados.',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        'Cuando te asignen vehículos, aparecerán aquí.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                ],
-              );
-            }
-            return ListView.builder(
-              padding: const EdgeInsets.only(top: 8, bottom: 24),
-              itemCount: items.length,
-              itemBuilder: (_, i) => _vehiculoCard(items[i]),
-            );
-          },
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0B0530), Color(0xFF197B9C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(25),
+          bottomRight: Radius.circular(25),
         ),
       ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              // Icono del drawer
+              Builder(
+                builder: (context) => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                    icon: const Icon(Icons.menu),
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Título y descripción
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Panel Chofer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Gestiona tus vehículos',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Indicador de estado si hay viaje activo
+          if (_viajeIdActual != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.directions_car, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'En viaje',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      drawer: const AppSidebarChofer(),
+      body: Column(
+        children: [
+          _buildCustomHeader(context),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _reload,
+              child: FutureBuilder<List<Vehiculo>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  // ... TU MISMO BUILDER SIN CAMBIOS ...
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const ListTile(
+                      title: Center(
+                          child: Padding(
+                        padding: EdgeInsets.only(top: 40),
+                        child: CircularProgressIndicator(),
+                      )),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return ListView(
+                      children: [
+                        const SizedBox(height: 40),
+                        Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Ocurrió un error al cargar tus vehículos:\n${snapshot.error}',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: ElevatedButton.icon(
+                            onPressed: _reload,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar'),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  final items = snapshot.data ?? [];
+                  if (items.isEmpty) {
+                    return ListView(
+                      children: const [
+                        SizedBox(height: 60),
+                        Icon(Icons.directions_bus_filled,
+                            size: 64, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Center(
+                          child: Text(
+                            'No tienes vehículos asignados.',
+                            style:
+                                TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              'Cuando te asignen vehículos, aparecerán aquí.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        )
+                      ],
+                    );
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(top: 8, bottom: 24),
+                    itemCount: items.length,
+                    itemBuilder: (_, i) => _vehiculoCard(items[i]),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCrearVehiculo, // NUEVO
+        onPressed: _openCrearVehiculo,
         icon: const Icon(Icons.add),
         label: const Text('Nuevo vehículo'),
       ),
