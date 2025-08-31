@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
-
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 class UbicacionModal extends StatefulWidget {
-  const UbicacionModal({super.key});
+  final String token;
+  const UbicacionModal({Key? key, required this.token}) : super(key: key);
 
   @override
   State<UbicacionModal> createState() => _UbicacionModalState();
@@ -11,11 +13,26 @@ class UbicacionModal extends StatefulWidget {
 class _UbicacionModalState extends State<UbicacionModal> {
   LocationData? _ubicacionActual;
   final Location _location = Location();
+  late IO.Socket socket;
 
   @override
   void initState() {
     super.initState();
+    _conectarSocket();
     _pedirPermisosYEscuchar();
+  }
+
+  void _conectarSocket() {
+    socket = IO.io(
+      'http://11.0.1.176:8000/user',
+      IO.OptionBuilder()
+        .setTransports(['websocket'])
+        .setPath('/ws/socket.io')
+        .setAuth({'token': widget.token})
+        .build(),
+    );
+    socket.onConnect((_) => print('Socket cliente conectado (modal)'));
+    socket.onDisconnect((_) => print('Socket cliente desconectado (modal)'));
   }
 
   Future<void> _pedirPermisosYEscuchar() async {
@@ -35,7 +52,19 @@ class _UbicacionModalState extends State<UbicacionModal> {
       setState(() {
         _ubicacionActual = ubicacion;
       });
+      if (socket.connected) {
+        socket.emit('my_location', {
+          'lat': ubicacion.latitude,
+          'lng': ubicacion.longitude,
+        });
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    socket.dispose();
+    super.dispose();
   }
 
   @override

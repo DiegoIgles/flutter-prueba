@@ -67,6 +67,7 @@ class _ChoferMisVehiculosPageState extends State<ChoferMisVehiculosPage> {
         builder: (_) => ViajeDetallePage(
           viajeId: r.viajeId,
           monto: r.monto,
+          token: widget.token,
         ),
       ),
     );

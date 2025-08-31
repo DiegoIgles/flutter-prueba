@@ -21,7 +21,6 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
-
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
@@ -31,23 +30,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-
-# Ignorar builds y archivos de configuración de plataformas
-android/build/
-ios/build/
-macos/build/
-windows/build/
-linux/build/
-web/build/
-**/build.gradle.kts
-linux/**/build.gradle.kts
-
-# Otros archivos de configuración de build de plataformas
-linux/CMakeLists.txt.user
-linux/.idea/
-macos/Pods/
-macos/Flutter/ephemeral/
-windows/.vs/
 
 # Symbolication related
 app.*.symbols
