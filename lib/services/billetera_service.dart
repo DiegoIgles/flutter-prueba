@@ -5,7 +5,7 @@ import '../models/movimiento.dart';
 import 'auth_service.dart';
 
 class BilleteraService {
-  static const String baseUrl = 'http://11.0.1.203:8000/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
   final AuthService _authService = AuthService();
 
   Future<BilleteraSaldoResponse> getSaldo(int clienteId) async {

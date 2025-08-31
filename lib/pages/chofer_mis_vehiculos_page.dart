@@ -5,7 +5,8 @@ import 'package:prueba/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
 import 'package:prueba/pages/ViajeDetallePage.dart'; // ajusta si tu ruta es distinta
-
+import 'package:prueba/pages/VistaPrediccionesIA.dart'; // aún por crear
+import "package:prueba/pages/MejoresHorasPage.dart"; // aún por crear
 class ChoferMisVehiculosPage extends StatefulWidget {
   final String token;
   const ChoferMisVehiculosPage({super.key, required this.token});
@@ -672,48 +673,104 @@ Future<void> _cargarTipos() async {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _reload,
-        color: const Color(0xFF197B9C),
-        child: FutureBuilder<List<Vehiculo>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF197B9C),
-                ),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return _buildErrorState();
-            }
-
-            final items = snapshot.data ?? [];
-            if (items.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.only(top: 8, bottom: 24),
-              itemCount: items.length,
-              itemBuilder: (_, i) => _vehiculoCard(items[i]),
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: RefreshIndicator(
+      onRefresh: _reload,
+      color: const Color(0xFF0B0530),
+      child: FutureBuilder<List<Vehiculo>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: Color.fromARGB(255, 67, 195, 238),
+              ),
             );
-          },
-        ),
+          }
+
+          if (snapshot.hasError) {
+            return _buildErrorState();
+          }
+
+          final items = snapshot.data ?? [];
+          if (items.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.only(top: 10, bottom: 24),
+            itemCount: items.length + 1,
+            itemBuilder: (_, i) {
+              if (i == 0) {
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0B0530),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PrediccionesIAPage(token: widget.token),
+                            ),
+                          );
+                        },
+                        icon: const Text("🤖", style: TextStyle(fontSize: 20)),
+                        label: const Text("Predicciones IA", style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0B0530),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MejoresHorasPage(token: widget.token),
+                            ),
+                          );
+                        },
+                        icon: const Text("🕒", style: TextStyle(fontSize: 20)),
+                        label: const Text("Mejores Horas", style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return _vehiculoCard(items[i - 1]);
+            },
+          );
+        },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCrearVehiculo,
-        backgroundColor: const Color(0xFF197B9C),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo Vehículo'),
-      ),
-    );
-  }
+    ),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: _openCrearVehiculo,
+      backgroundColor: const Color(0xFF197B9C),
+      foregroundColor: Colors.white,
+      icon: const Icon(Icons.add),
+      label: const Text('Nuevo Vehículo'),
+    ),
+  );
+}
+
 
   Widget _buildErrorState() {
     return Center(

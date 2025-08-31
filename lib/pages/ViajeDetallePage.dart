@@ -35,7 +35,7 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
 
   void _conectarSocket() {
     socket = IO.io(
-      'http://11.0.1.176:8000/driver', // Namespace en la URL
+      'http://127.0.0.1:8000/driver', // Namespace en la URL
       IO.OptionBuilder()
         .setTransports(['websocket'])
         .setPath('/ws/socket.io')

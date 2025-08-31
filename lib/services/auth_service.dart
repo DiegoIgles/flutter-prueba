@@ -6,7 +6,7 @@ import '../models/cliente_create.dart';
 import '../models/cliente.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://11.0.1.176:8000/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   // Almacén temporal de tokens en memoria
   static String? _tokenCliente;
