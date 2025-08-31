@@ -22,4 +22,14 @@ class Cliente {
       telefono: json['telefono'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'apellido': apellido,
+      'email': email,
+      'telefono': telefono,
+    };
+  }
 }

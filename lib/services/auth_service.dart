@@ -4,9 +4,10 @@ import '../models/login_request.dart';
 import '../models/token_response.dart';
 import '../models/cliente_create.dart';
 import '../models/cliente.dart';
+import 'session_cache_service.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://11.0.1.203:8000/api';
+  static const String baseUrl = 'http://11.0.1.204:8000/api';
 
   // Almacén temporal de tokens en memoria
   static String? _tokenCliente;
@@ -30,7 +31,17 @@ class AuthService {
       if (res.statusCode == 200 || res.statusCode == 201) {
         final tokenRes = TokenResponse.fromJson(jsonDecode(res.body));
         _tokenCliente = tokenRes.accessToken;
-        print('✅ Token recibido (cliente): $_tokenCliente');
+        
+        // Obtener datos del cliente y guardar en caché
+        final cliente = await getCurrentCliente();
+        if (cliente != null) {
+          await SessionCacheService.saveClienteSession(
+            token: tokenRes.accessToken,
+            cliente: cliente,
+          );
+        }
+        
+        print('✅ Token recibido y guardado en caché (cliente): $_tokenCliente');
         return tokenRes;
       } else {
         throw Exception('❌ Error ${res.statusCode}: ${res.body}');
@@ -59,7 +70,13 @@ class AuthService {
     if (res.statusCode == 200 || res.statusCode == 201) {
       final tokenRes = TokenResponse.fromJson(jsonDecode(res.body));
       _tokenChofer = tokenRes.accessToken;
-      print('✅ Token CHOFER recibido');
+      
+      // Guardar en caché (sin datos adicionales por ahora)
+      await SessionCacheService.saveChoferSession(
+        token: tokenRes.accessToken,
+      );
+      
+      print('✅ Token CHOFER recibido y guardado en caché');
       return tokenRes;
     } else {
       throw Exception('❌ Error ${res.statusCode}: ${res.body}');
@@ -67,14 +84,56 @@ class AuthService {
   }
 
   Future<String?> getToken({required bool chofer}) async {
+    // Primero intentar obtener del caché
+    String? cachedToken;
+    if (chofer) {
+      cachedToken = await SessionCacheService.getChoferToken();
+    } else {
+      cachedToken = await SessionCacheService.getClienteToken();
+    }
+    
+    // Si hay token en caché, actualizar la variable en memoria y devolverlo
+    if (cachedToken != null && cachedToken.isNotEmpty) {
+      if (chofer) {
+        _tokenChofer = cachedToken;
+      } else {
+        _tokenCliente = cachedToken;
+      }
+      return cachedToken;
+    }
+    
+    // Si no hay en caché, devolver el que está en memoria
     return chofer ? _tokenChofer : _tokenCliente;
   }
 
   Future<void> logout({required bool chofer}) async {
+    // Limpiar de memoria
     if (chofer) {
       _tokenChofer = null;
+      // Limpiar del caché
+      await SessionCacheService.clearChoferSession();
     } else {
       _tokenCliente = null;
+      // Limpiar del caché
+      await SessionCacheService.clearClienteSession();
+    }
+    
+    print('🚪 Sesión cerrada y caché limpiado para ${chofer ? 'chofer' : 'cliente'}');
+  }
+
+  // Nuevo método para cargar sesión desde caché al iniciar la app
+  Future<void> loadSessionFromCache() async {
+    final clienteToken = await SessionCacheService.getClienteToken();
+    final choferToken = await SessionCacheService.getChoferToken();
+    
+    if (clienteToken != null && clienteToken.isNotEmpty) {
+      _tokenCliente = clienteToken;
+      print('🔄 Sesión de cliente cargada desde caché');
+    }
+    
+    if (choferToken != null && choferToken.isNotEmpty) {
+      _tokenChofer = choferToken;
+      print('🔄 Sesión de chofer cargada desde caché');
     }
   }
 
