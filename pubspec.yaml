@@ -30,11 +30,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  google_maps_flutter: ^2.5.0
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   location: ^5.0.3
   provider: ^6.1.2
+  socket_io_client: ^3.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

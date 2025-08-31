@@ -513,6 +513,7 @@ class _ChoferRetirarPageState extends State<ChoferRetirarPage> {
 
                       // Método de pago
                       DropdownButtonFormField<String>(
+                        isExpanded: true ,
                         value: _metodoPago,
                         decoration: InputDecoration(
                           labelText: 'Método de retiro',
@@ -530,7 +531,11 @@ class _ChoferRetirarPageState extends State<ChoferRetirarPage> {
                         items: const [
                           DropdownMenuItem(
                             value: 'banco',
-                            child: Text('🏦 Transferencia bancaria'),
+                            child: Text(
+                              '🏦 Transferencia bancaria',
+                              overflow: TextOverflow.visible,
+                              softWrap: true,
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'movil',
