@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/chofer_notificacion_service.dart';
 import '../services/session_cache_service.dart';
 import 'chofer_mis_vehiculos_page.dart';
 import 'chofer_billetera_page.dart';
 import 'chofer_movimientos_page.dart';
 import 'chofer_retirar_page.dart';
+import 'chofer_notificacion_page.dart';
 import 'home_page.dart';
 
 class ChoferDashboardPage extends StatefulWidget {
@@ -136,43 +139,61 @@ class _ChoferDashboardPageState extends State<ChoferDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          _buildCustomHeader(),
-          Expanded(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: _pages,
-            ),
+    return ChangeNotifierProvider(
+      create: (_) {
+        final service = ChoferNotificacionService();
+        service.start(widget.token);
+        return service;
+      },
+      child: Builder(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(_getAppBarTitle()),
+            backgroundColor: const Color(0xFF0B0530),
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout),
+                tooltip: 'Cerrar sesión',
+              ),
+            ],
           ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color(0xFF197B9C),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.directions_bus),
-            label: 'Mis Vehículos',
+          body: Stack(
+            children: [
+              IndexedStack(
+                index: _selectedIndex,
+                children: _pages,
+              ),
+              const ChoferNotificacionPage(),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Mi Billetera',
+          bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            selectedItemColor: const Color(0xFF197B9C),
+            unselectedItemColor: Colors.grey,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.directions_bus),
+                label: 'Mis Vehículos',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.account_balance_wallet),
+                label: 'Mi Billetera',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.history),
+                label: 'Movimientos',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.money_off),
+                label: 'Retirar',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Movimientos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.money_off),
-            label: 'Retirar',
-          ),
-        ],
+        ),
       ),
     );
   }

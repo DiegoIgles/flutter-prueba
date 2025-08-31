@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:prueba/services/ticket_service.dart';
 import '../services/auth_service.dart';
 import '../models/cliente.dart';
 import '../providers/billetera_provider.dart';
@@ -8,6 +9,7 @@ import 'cliente_perfil_page.dart';
 import 'cliente_movimientos_page.dart';
 import 'package:prueba/widgets/ubicacion_modal.dart';
 import 'ubicacion_page.dart';
+import 'package:prueba/services/cliente_sockets.dart';
 
 class ClienteDashboardPage extends StatefulWidget {
   final String token;
@@ -25,6 +27,7 @@ class ClienteDashboardPage extends StatefulWidget {
 
 class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
   final AuthService _authService = AuthService();
+  late ClienteSockets clienteSockets;
 
   Cliente? _clienteInfo;
   int _selectedIndex = 0;
@@ -35,6 +38,8 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
   @override
   void initState() {
     super.initState();
+    clienteSockets = ClienteSockets();
+    clienteSockets.start(widget.token, context);
     _clienteInfo = widget.cliente;
     _initializePages();
 
@@ -44,6 +49,12 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
     });
 
     _simularProximidadChofer(); // Simular detección de chofer cercano
+  }
+
+  @override
+  void dispose() {
+    clienteSockets.dispose();
+    super.dispose();
   }
 
   void _mostrarUbicacionModal() {
@@ -73,7 +84,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
         setState(() {
           _choferCercano = true;
         });
-        _mostrarAlertaChoferCercano();
+        // _mostrarAlertaChoferCercano();
       }
     });
   }
@@ -162,8 +173,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
           // Saludo personalizado
           Card(
             elevation: 4,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -208,8 +218,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
             builder: (context, billeteraProvider, child) {
               return Card(
                 elevation: 3,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -260,9 +269,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
                         ),
                       ),
                       IconButton(
-                        onPressed: billeteraProvider.loadingSaldo
-                            ? null
-                            : _refrescarSaldo,
+                        onPressed: billeteraProvider.loadingSaldo ? null : _refrescarSaldo,
                         icon: billeteraProvider.loadingSaldo
                             ? const SizedBox(
                                 width: 20,
@@ -288,8 +295,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
           if (_choferCercano) ...[
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -389,9 +395,24 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
               backgroundColor: const Color(0xFF197B9C),
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
+          ),
+
+          // Lista de tickets recibidos por socket
+          const SizedBox(height: 20),
+          Text(
+            'Ofertas de viaje',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 340,
+            child: _buildTicketList(),
           ),
         ],
       ),
@@ -443,7 +464,200 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
     );
   }
 
-  Widget _buildCustomHeader() {
+  Widget _buildTicketList() {
+    return ValueListenableBuilder<List<Map<String, dynamic>>>(
+      valueListenable: clienteSockets.ticketsNotifier,
+      builder: (context, tickets, _) {
+        // Filtrar tickets con monto o estado nulo
+        final filteredTickets = tickets.where((t) => t['monto'] != null && t['estado'] != null).toList();
+        if (filteredTickets.isEmpty) {
+          return const Text('No hay ofertas de viaje');
+        }
+        return SizedBox(
+          height: 340,
+          child: Scrollbar(
+            radius: const Radius.circular(12),
+            thickness: 6,
+            thumbVisibility: true,
+            child: ListView.separated(
+              itemCount: filteredTickets.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) {
+                final t = filteredTickets[i];
+                return Card(
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Icono removido para más espacio
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Modelo como título principal
+                              Text(
+                                t['vehiculo_modelo'] ?? 'Modelo desconocido',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF0B0530),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              // Placa y tipo de vehículo en una fila
+                              Row(
+                                children: [
+                                  Icon(Icons.confirmation_number, color: Colors.blueGrey.shade400, size: 16),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    t['vehiculo_placa'] ?? '-',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Icon(Icons.directions_car, color: Colors.blueGrey, size: 16),
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: Text(
+                                      t['tipo_nombre'] ?? '-',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              // Nombre del chofer
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, color: Color(0xFF197B9C), size: 16),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      t['chofer_nombre'] ?? '-',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF197B9C),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              // Monto y estado (solo si no es pendiente)
+                              Row(
+                                children: [
+                                  const Icon(Icons.attach_money, color: Colors.green, size: 16),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${t['monto']}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                  if (t['estado'] != 'pendiente') ...[
+                                    const SizedBox(width: 10),
+                                    const Icon(Icons.info_outline, color: Colors.orange, size: 15),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '${t['estado']}'.toUpperCase(),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 12,
+                                        color: t['estado'] == 'activo' ? Colors.blue : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final clienteId = _clienteInfo?.id;
+                            if (clienteId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('No se encontró el ID del cliente.')),
+                              );
+                              return;
+                            }
+                            try {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(child: CircularProgressIndicator()),
+                              );
+                              final resp = await TicketService.pagarTicket(
+                                ticketOfferId: t['ticket_id'],
+                                clienteId: clienteId,
+                                token: widget.token,
+                              );
+                              Navigator.of(context).pop(); // Cerrar loading
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('¡Pago realizado! Ticket #${resp['ticket_id']}')),
+                              );
+                              // Emitir evento socket para notificar al chofer
+                              clienteSockets.socket.emit('ticket_paid', {
+                                'ticket_id': t['ticket_id'],
+                                'cliente_id': clienteId,
+                              });
+                              _refrescarSaldo();
+                            } catch (e) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error al pagar: $e')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.payment, size: 20),
+                          label: const Text('Pagar', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF197B9C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            textStyle: const TextStyle(fontSize: 16),
+                            elevation: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+Widget _buildCustomHeader() {
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 10,
