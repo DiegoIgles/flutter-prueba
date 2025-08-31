@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:MoviPay/models/tipo_vehiculo.dart';
+import 'package:movipay/models/tipo_vehiculo.dart';
 import '../models/vehiculo.dart';
 import 'auth_service.dart';
 

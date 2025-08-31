@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:MoviPay/models/tipo_vehiculo.dart';
-import 'package:MoviPay/services/auth_service.dart';
-import 'package:MoviPay/services/viaje_service.dart';
+import 'package:movipay/models/tipo_vehiculo.dart';
+import 'package:movipay/services/auth_service.dart';
+import 'package:movipay/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
-import 'package:MoviPay/widgets/sidebartChofer.dart'; // Asegúrate que esta ruta esté correcta
-import 'package:MoviPay/pages/ViajeDetallePage.dart';
+import 'package:movipay/widgets/sidebartChofer.dart'; // Asegúrate que esta ruta esté correcta
+import 'package:movipay/pages/ViajeDetallePage.dart';
 
 class ChoferWelcomePage extends StatefulWidget {
   final String token;

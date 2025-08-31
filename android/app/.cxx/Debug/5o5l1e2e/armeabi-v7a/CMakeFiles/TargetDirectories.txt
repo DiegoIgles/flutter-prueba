@@ -1,0 +1,2 @@
+C:/Users/aticl/Documents/proyecto-movil/flutter-prueba/android/app/.cxx/Debug/5o5l1e2e/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/aticl/Documents/proyecto-movil/flutter-prueba/android/app/.cxx/Debug/5o5l1e2e/armeabi-v7a/CMakeFiles/rebuild_cache.dir
