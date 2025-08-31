@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:prueba/pages/home_page.dart';
+import 'package:MoviPay/pages/home_page.dart';
 
 class AppSidebarChofer extends StatelessWidget {
   const AppSidebarChofer({super.key});

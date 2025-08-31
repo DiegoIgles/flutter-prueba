@@ -1,6 +1,6 @@
 // import 'package:flutter/material.dart';
 // import 'package:location/location.dart';
-// import 'package:prueba/widgets/sidebar.dart'; // Asegúrate que esta ruta esté correcta
+// import 'package:MoviPay/widgets/sidebar.dart'; // Asegúrate que esta ruta esté correcta
 
 // class ClienteWelcomePage extends StatefulWidget {
 //   final String token;

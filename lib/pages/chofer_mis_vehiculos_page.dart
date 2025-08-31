@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:prueba/models/tipo_vehiculo.dart';
-import 'package:prueba/services/auth_service.dart';
-import 'package:prueba/services/viaje_service.dart';
+import 'package:MoviPay/models/tipo_vehiculo.dart';
+import 'package:MoviPay/services/auth_service.dart';
+import 'package:MoviPay/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
-import 'package:prueba/pages/ViajeDetallePage.dart'; // ajusta si tu ruta es distinta
+import 'package:MoviPay/pages/ViajeDetallePage.dart'; // ajusta si tu ruta es distinta
 
 class ChoferMisVehiculosPage extends StatefulWidget {
   final String token;
@@ -13,6 +13,7 @@ class ChoferMisVehiculosPage extends StatefulWidget {
   @override
   State<ChoferMisVehiculosPage> createState() => _ChoferMisVehiculosPageState();
 }
+
 Map<int, String> _tipoNombre = {};
 bool _cargandoTipos = true;
 
@@ -28,23 +29,23 @@ class _ChoferMisVehiculosPageState extends State<ChoferMisVehiculosPage> {
   late Future<List<Vehiculo>> _future;
 
   @override
-void initState() {
-  super.initState();
-  _future = _vehiculoService.listarMisVehiculos();
-  _cargarTipos();
-}
-
-Future<void> _cargarTipos() async {
-  try {
-    final tipos = await _vehiculoService.listarTipos();
-    setState(() {
-      _tipoNombre = {for (final t in tipos) t.id: t.nombre};
-      _cargandoTipos = false;
-    });
-  } catch (e) {
-    setState(() => _cargandoTipos = false);
+  void initState() {
+    super.initState();
+    _future = _vehiculoService.listarMisVehiculos();
+    _cargarTipos();
   }
-}
+
+  Future<void> _cargarTipos() async {
+    try {
+      final tipos = await _vehiculoService.listarTipos();
+      setState(() {
+        _tipoNombre = {for (final t in tipos) t.id: t.nombre};
+        _cargandoTipos = false;
+      });
+    } catch (e) {
+      setState(() => _cargandoTipos = false);
+    }
+  }
 
   Future<void> _reload() async {
     setState(() {
@@ -52,52 +53,53 @@ Future<void> _cargarTipos() async {
     });
     await _future;
   }
+
   Future<void> _iniciarViaje(int vehiculoId) async {
-  if (_accionando) return;
-  setState(() => _accionando = true);
+    if (_accionando) return;
+    setState(() => _accionando = true);
 
-  try {
-    final r = await _viajeService.start(vehiculoId);
+    try {
+      final r = await _viajeService.start(vehiculoId);
 
-    setState(() {
-      _viajeIdActual = r.viajeId;
-      _vehiculoEnViaje = vehiculoId;
-      _montoActual = r.monto;
-    });
+      setState(() {
+        _viajeIdActual = r.viajeId;
+        _vehiculoEnViaje = vehiculoId;
+        _montoActual = r.monto;
+      });
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:
-            Text('🚀 Viaje iniciado (ID ${r.viajeId}) — Monto: ${r.monto}'),
-        backgroundColor: const Color(0xFF197B9C),
-      ),
-    );
-
-    // ✅ Navegar a la pantalla de detalles del viaje
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ViajeDetallePage(
-          viajeId: r.viajeId,
-          monto: r.monto,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('🚀 Viaje iniciado (ID ${r.viajeId}) — Monto: ${r.monto}'),
+          backgroundColor: const Color(0xFF197B9C),
         ),
-      ),
-    );
-  } catch (e) {
-    if (!mounted) return;
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('No se pudo iniciar viaje: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    if (mounted) setState(() => _accionando = false);
+      // ✅ Navegar a la pantalla de detalles del viaje
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ViajeDetallePage(
+            viajeId: r.viajeId,
+            monto: r.monto,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo iniciar viaje: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _accionando = false);
+    }
   }
-}
 
   Future<void> _finalizarViaje() async {
     if (_accionando || _viajeIdActual == null) return;

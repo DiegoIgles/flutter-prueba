@@ -6,7 +6,7 @@ import '../providers/billetera_provider.dart';
 import 'cliente_billetera_page.dart';
 import 'cliente_perfil_page.dart';
 import 'cliente_movimientos_page.dart';
-import 'package:prueba/widgets/ubicacion_modal.dart';
+import 'package:MoviPay/widgets/ubicacion_modal.dart';
 
 class ClienteDashboardPage extends StatefulWidget {
   final String token;

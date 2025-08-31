@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:prueba/pages/chofer_login_page.dart';
+import 'package:MoviPay/pages/chofer_login_page.dart';
 import '../widgets/sidebar.dart';
 import 'cliente_login_page.dart';
 

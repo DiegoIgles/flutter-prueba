@@ -65,7 +65,7 @@ class _ChoferDashboardPageState extends State<ChoferDashboardPage> {
             tooltip: 'Cerrar sesión',
           ),
         ],
-      ),
+      ),  
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
