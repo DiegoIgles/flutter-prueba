@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/session_cache_service.dart';
+import '../services/auth_service.dart';
+import '../models/cliente.dart';
 import 'home_page.dart';
+import 'cliente_dashboard_page.dart';
+import 'chofer_dashboard_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -104,25 +109,108 @@ class _SplashScreenState extends State<SplashScreen>
     // Esperar que todas las animaciones terminen
     await Future.delayed(const Duration(milliseconds: 2800));
     
-    // Vibración final
+    // Verificar si hay sesión guardada
+    await _checkSession();
+  }
+
+  Future<void> _checkSession() async {
     try {
-      HapticFeedback.selectionClick();
+      print('🔍 Verificando sesión guardada...');
+      
+      // Verificar si hay sesión activa
+      final hasSession = await SessionCacheService.hasActiveSession();
+      
+      if (hasSession) {
+        print('✅ Sesión encontrada, cargando datos...');
+        
+        // Cargar sesión en AuthService
+        final authService = AuthService();
+        await authService.loadSessionFromCache();
+        
+        // Obtener información de la sesión
+        final sessionData = await SessionCacheService.getActiveSession();
+        
+        if (sessionData != null) {
+          final userType = sessionData['type'] as String;
+          final token = sessionData['token'] as String;
+          
+          // Vibración de éxito
+          try {
+            HapticFeedback.selectionClick();
+          } catch (e) {
+            // Ignorar si no está disponible
+          }
+          
+          if (mounted) {
+            if (userType == 'cliente') {
+              // Navegar al dashboard del cliente
+              final cliente = sessionData['user'] as Cliente;
+              Navigator.of(context).pushReplacement(
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      ClienteDashboardPage(token: token, cliente: cliente),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 600),
+                ),
+              );
+            } else if (userType == 'chofer') {
+              // Navegar al dashboard del chofer
+              Navigator.of(context).pushReplacement(
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      ChoferDashboardPage(token: token),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 600),
+                ),
+              );
+            }
+          }
+          return;
+        }
+      }
+      
+      print('❌ No hay sesión guardada, ir a página principal');
+      
+      // No hay sesión, ir a la página principal
+      if (mounted) {
+        // Vibración final
+        try {
+          HapticFeedback.selectionClick();
+        } catch (e) {
+          // Ignorar si no está disponible
+        }
+        
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const HomePage(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 600),
+          ),
+        );
+      }
     } catch (e) {
-      // Ignorar si no está disponible
-    }
-    
-    // Navegar a la página principal
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const HomePage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 600),
-        ),
-      );
+      print('🚨 Error verificando sesión: $e');
+      
+      // En caso de error, ir a la página principal
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const HomePage(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 600),
+          ),
+        );
+      }
     }
   }
 
