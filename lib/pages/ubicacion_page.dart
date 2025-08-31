@@ -35,24 +35,6 @@ class _UbicacionPageState extends State<UbicacionPage> {
     );
 
     socket.onConnect((_) => print('Socket cliente conectado'));
-    socket.on('ticket_offer', (data) {
-      print('¡INTERSECTADO! Oferta recibida: $data');
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('¡Chofer cerca!'),
-            content: Text('Se detectó un chofer cerca de ti.\n\nDatos: ${data.toString()}'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    });
     socket.onDisconnect((_) => print('Socket cliente desconectado'));
   }
 
