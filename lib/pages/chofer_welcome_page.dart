@@ -56,6 +56,7 @@ class _ChoferWelcomePageState extends State<ChoferWelcomePage> {
           builder: (_) => ViajeDetallePage(
             viajeId: r.viajeId,
             monto: r.monto,
+            token: widget.token,
           ),
         ),
       );
