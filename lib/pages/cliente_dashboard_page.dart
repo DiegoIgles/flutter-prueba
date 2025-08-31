@@ -84,7 +84,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
         setState(() {
           _choferCercano = true;
         });
-        _mostrarAlertaChoferCercano();
+        // _mostrarAlertaChoferCercano();
       }
     });
   }

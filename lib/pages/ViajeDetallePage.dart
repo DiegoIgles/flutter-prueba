@@ -1,3 +1,4 @@
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ class ViajeDetallePage extends StatefulWidget {
 }
 
 class _ViajeDetallePageState extends State<ViajeDetallePage> {
+  GoogleMapController? _mapController;
   LocationData? _ubicacion;
   final Location _location = Location();
   StreamSubscription<LocationData>? _ubicacionSubscription;
@@ -89,6 +91,13 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
         _ubicacionSubscription = _location.onLocationChanged.listen((loc) {
           print('📍 Nueva ubicación: ${loc.latitude}, ${loc.longitude}');
           setState(() => _ubicacion = loc);
+          if (_mapController != null && loc.latitude != null && loc.longitude != null) {
+            _mapController!.animateCamera(
+              CameraUpdate.newLatLng(
+                LatLng(loc.latitude!, loc.longitude!),
+              ),
+            );
+          }
           if (socket.connected) {
             // --- LADO CHOFER: enviar ubicación con viaje_id y chofer_id ---
             socket.emit('location', {
@@ -113,8 +122,8 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
 
   @override
   Widget build(BuildContext context) {
-    final lat = _ubicacion?.latitude?.toStringAsFixed(5) ?? '...';
-    final lon = _ubicacion?.longitude?.toStringAsFixed(5) ?? '...';
+    final lat = _ubicacion?.latitude?.toStringAsFixed(6) ?? 'Cargando...';
+    final lon = _ubicacion?.longitude?.toStringAsFixed(6) ?? 'Cargando...';
 
     return ChangeNotifierProvider(
       create: (_) {
@@ -135,40 +144,59 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
                 backgroundColor: const Color(0xFF0B0530),
                 iconTheme: const IconThemeData(color: Colors.white),
               ),
-              body: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ListView(
-                  children: [
-                    _buildCard(
-                      icon: Icons.directions_bus,
-                      title: 'ID del viaje',
-                      value: widget.viajeId.toString(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildCard(
-                      icon: Icons.attach_money,
-                      title: 'Monto',
-                      value: widget.monto,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildCard(
-                      icon: Icons.location_on,
-                      title: 'Ubicación actual',
-                      value: 'Latitud: $lat\nLongitud: $lon',
-                    ),
-                    const SizedBox(height: 32),
-                    Center(
-                      child: Text(
-                        'Puedes ahora continuar con tu viaje...',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w500,
+              body: Column(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _ubicacion == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: LatLng(_ubicacion!.latitude!, _ubicacion!.longitude!),
+                              zoom: 17,
+                            ),
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: true,
+                            onMapCreated: (controller) => _mapController = controller,
+                          ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _buildCard(
+                          icon: Icons.directions_bus,
+                          title: 'ID del viaje',
+                          value: widget.viajeId.toString(),
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        _buildCard(
+                          icon: Icons.attach_money,
+                          title: 'Monto',
+                          value: widget.monto,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildCard(
+                          icon: Icons.location_on,
+                          title: 'Ubicación actual',
+                          value: 'Latitud: $lat\nLongitud: $lon',
+                        ),
+                        const SizedBox(height: 32),
+                        Center(
+                          child: Text(
+                            'Puedes ahora continuar con tu viaje...',
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const ChoferNotificacionPage(),
