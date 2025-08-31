@@ -13,6 +13,9 @@ class BilleteraProvider extends ChangeNotifier {
   bool _loadingSaldo = false;
   String? _error;
 
+  bool _qrVerificando = false; // evita /verificar solapados
+  bool _qrFinalizado = false; // ya terminamos (completado/expirado)
+
   List<Movimiento> _movimientos = [];
   bool _loadingMovimientos = false;
   String? _errorMovimientos;
@@ -90,78 +93,96 @@ class BilleteraProvider extends ChangeNotifier {
 
   /// 1) Genera el QR y arranca polling contra /qr/verificar
   Future<void> iniciarRecargaConQr({
-    required double monto,
-    String? vigencia,
-    bool usoUnico = true,
-    Duration intervalo = const Duration(seconds: 3),
-    String? detalle, // <-- opcional en la API pública del provider
-  }) async {
-    _qrError = null;
-    _qrProcesando = true;
+  required double monto,
+  String? vigencia,
+  bool usoUnico = true,
+  Duration intervalo = const Duration(seconds: 3),
+  String? detalle,
+}) async {
+  _qrError = null;
+  _qrProcesando = true;
+
+  // ⬇️ limpiar cualquier flujo previo
+  _qrTimer?.cancel();
+  _qrFinalizado = false;
+  _qrVerificando = false;
+  _qrEstado = 'Pendiente';
+  _qrDataUrl = null;
+  notifyListeners();
+
+  final det = detalle ?? 'Recarga desde app - ${monto.toStringAsFixed(2)} BOB';
+
+  try {
+    final resp = await _billeteraService.generarQr(
+      monto: double.parse(monto.toStringAsFixed(2)),
+      vigencia: vigencia,
+      usoUnico: usoUnico,
+      detalle: det,
+    );
+    final data = resp['Data'] as Map<String, dynamic>;
+    _qrMovimientoId = data['movimiento_id'] as int;
+    _qrDataUrl = data['qr'] as String;
+
+    _qrProcesando = false;
     notifyListeners();
 
-    // 👇 detalle SIEMPRE no-nulo
-    final det =
-        detalle ?? 'Recarga desde app - ${monto.toStringAsFixed(2)} BOB';
-
-    try {
-      final resp = await _billeteraService.generarQr(
-        monto: double.parse(monto.toStringAsFixed(2)),
-        vigencia: vigencia,
-        usoUnico: usoUnico,
-        detalle: det, // <-- SIEMPRE lo enviamos
-      );
-      final data = resp['Data'] as Map<String, dynamic>;
-      _qrMovimientoId = data['movimiento_id'] as int;
-      _qrDataUrl = data['qr'] as String;
-      _qrProcesando = false;
-      notifyListeners();
-
-      _qrTimer = Timer.periodic(intervalo, (_) => _verificarQrUnaVez());
-    } catch (e) {
-      _qrProcesando = false;
-      _qrError = 'Error generando QR: $e';
-      notifyListeners();
-    }
+    // ⬇️ arranca polling
+    _qrTimer = Timer.periodic(intervalo, (_) => _verificarQrUnaVez());
+  } catch (e) {
+    _qrProcesando = false;
+    _qrError = 'Error generando QR: $e';
+    notifyListeners();
   }
+}
 
   /// 2) Verifica una vez; si completa, para timer y refresca saldo/movs
   Future<void> _verificarQrUnaVez() async {
-    if (_qrMovimientoId == null) return;
-    try {
-      final res = await _billeteraService.verificarQr(
-        movimientoId: _qrMovimientoId!,
-      );
-      final data = res['Data'] as Map<String, dynamic>;
-      _qrEstado = (data['estado'] as String?) ?? 'Pendiente';
-      notifyListeners();
+  // ⬇️ no dispares si no hay id, ya finalizó o hay una verificación en curso
+  if (_qrMovimientoId == null || _qrFinalizado || _qrVerificando) return;
 
-      final estadoLower = _qrEstado.toLowerCase();
-      if (estadoLower == 'completado') {
-        _qrTimer?.cancel();
-        // Tu backend ya acreditó en /verificar; aquí solo refrescamos
-        await cargarSaldo();
-        await cargarMovimientos();
-      } else if (estadoLower == 'expirado') {
-        _qrTimer?.cancel();
-      }
-    } catch (e) {
-      // Puedes decidir si parar polling ante error repetido
-      _qrError = 'Error verificando QR: $e';
-      notifyListeners();
+  _qrVerificando = true;
+  try {
+    final res = await _billeteraService.verificarQr(
+      movimientoId: _qrMovimientoId!,
+    );
+    final data = res['Data'] as Map<String, dynamic>;
+    _qrEstado = (data['estado'] as String?) ?? 'Pendiente';
+    notifyListeners();
+
+    final estadoLower = _qrEstado.toLowerCase();
+    if (estadoLower == 'completado') {
+      _qrFinalizado = true;          // ⬅️ marca terminado
+      _qrTimer?.cancel();            // ⬅️ detén polling
+      await cargarSaldo();           // refresca vista
+      await cargarMovimientos();
+    } else if (estadoLower == 'expirado') {
+      _qrFinalizado = true;
+      _qrTimer?.cancel();
     }
+  } catch (e) {
+    _qrError = 'Error verificando QR: $e';
+    notifyListeners();
+  } finally {
+    _qrVerificando = false;          // ⬅️ libera el candado
   }
+}
+
 
   /// 3) Cancela/limpia el flujo de QR (al cerrar modal, etc.)
-  void cancelarRecargaQr() {
-    _qrTimer?.cancel();
-    _qrMovimientoId = null;
-    _qrDataUrl = null;
-    _qrEstado = 'Pendiente';
-    _qrError = null;
-    _qrProcesando = false;
-    notifyListeners();
-  }
+ void cancelarRecargaQr() {
+  _qrTimer?.cancel();
+  _qrMovimientoId = null;
+  _qrDataUrl = null;
+  _qrEstado = 'Pendiente';
+  _qrError = null;
+  _qrProcesando = false;
+
+  // ⬇️ asegúrate de cortar cualquier verificación pendiente
+  _qrVerificando = false;
+  _qrFinalizado = true;
+
+  notifyListeners();
+}
 
   // ================== Helpers ==================
   void clearError() {

@@ -6,7 +6,7 @@ import '../models/movimiento.dart';
 import 'auth_service.dart';
 
 class BilleteraService {
-  static const String baseUrl = 'http://11.0.1.204:8000/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
   final AuthService _authService = AuthService();
 
   Future<BilleteraSaldoResponse> getSaldo(int clienteId) async {
@@ -148,35 +148,18 @@ class BilleteraService {
     'accept': 'application/json',
   };
 
-  // 👇 el backend espera str
-  final payload = {'movimiento_id': movimientoId.toString()};
-  final body = jsonEncode(payload);
-
-  debugPrint('🛰️ REQ POST $uri');
-  debugPrint('📦 Body: $body');
+  // ✅ el backend espera string
+  final body = jsonEncode({'movimiento_id': movimientoId.toString()});
 
   final res = await http.post(uri, headers: headers, body: body);
-
-  debugPrint('⬅️ RES ${res.statusCode} ${res.reasonPhrase}');
-  debugPrint('📨 Body: ${res.body}');
-
-  // Log de 422 para ver exactamente el error del validador (si apareciera)
-  if (res.statusCode == 422) {
-    throw Exception('422 Validation: ${res.body}');
-  }
-  if (res.statusCode == 401 || res.statusCode == 403) {
-    throw Exception('No autorizado. ¿Token expirado?');
-  }
-  if (res.statusCode != 200) {
-    throw Exception('Error ${res.statusCode}: ${res.body}');
-  }
+  if (res.statusCode == 422) { throw Exception('422 Validation: ${res.body}'); }
+  if (res.statusCode == 401 || res.statusCode == 403) { throw Exception('No autorizado'); }
+  if (res.statusCode != 200) { throw Exception('Error ${res.statusCode}: ${res.body}'); }
 
   final data = jsonDecode(res.body) as Map<String, dynamic>;
-  if ((data['Codigo'] ?? 1) != 0) {
-    throw Exception(data['Mensaje'] ?? 'Fallo verificación');
-  }
+  if ((data['Codigo'] ?? 1) != 0) { throw Exception(data['Mensaje'] ?? 'Fallo verificación'); }
   return data;
-  }
+ }
 
   // Método para obtener historial de movimientos
   Future<List<Movimiento>> getMovimientos(int clienteId) async {

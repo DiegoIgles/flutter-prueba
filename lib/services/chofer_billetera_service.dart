@@ -6,7 +6,7 @@ import '../models/movimiento.dart';
 import 'auth_service.dart';
 
 class ChoferBilleteraService {
-  static const String baseUrl = 'http://11.0.1.203:8000/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   Future<BilleteraSaldoResponse> getSaldo(int choferId) async {
     print(
