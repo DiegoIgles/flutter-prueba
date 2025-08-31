@@ -4,6 +4,7 @@ import 'package:prueba/services/auth_service.dart';
 import 'package:prueba/services/viaje_service.dart';
 import '../models/vehiculo.dart';
 import '../services/vehiculo_service.dart';
+import 'package:prueba/pages/ViajeDetallePage.dart'; // ajusta si tu ruta es distinta
 
 class ChoferMisVehiculosPage extends StatefulWidget {
   final String token;
@@ -36,37 +37,52 @@ class _ChoferMisVehiculosPageState extends State<ChoferMisVehiculosPage> {
     });
     await _future;
   }
-
   Future<void> _iniciarViaje(int vehiculoId) async {
-    if (_accionando) return;
-    setState(() => _accionando = true);
-    try {
-      final r = await _viajeService.start(vehiculoId);
-      setState(() {
-        _viajeIdActual = r.viajeId;
-        _vehiculoEnViaje = vehiculoId;
-        _montoActual = r.monto;
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text('🚀 Viaje iniciado (ID ${r.viajeId}) — Monto: ${r.monto}'),
-          backgroundColor: const Color(0xFF197B9C),
+  if (_accionando) return;
+  setState(() => _accionando = true);
+
+  try {
+    final r = await _viajeService.start(vehiculoId);
+
+    setState(() {
+      _viajeIdActual = r.viajeId;
+      _vehiculoEnViaje = vehiculoId;
+      _montoActual = r.monto;
+    });
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text('🚀 Viaje iniciado (ID ${r.viajeId}) — Monto: ${r.monto}'),
+        backgroundColor: const Color(0xFF197B9C),
+      ),
+    );
+
+    // ✅ Navegar a la pantalla de detalles del viaje
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ViajeDetallePage(
+          viajeId: r.viajeId,
+          monto: r.monto,
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No se pudo iniciar viaje: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _accionando = false);
-    }
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('No se pudo iniciar viaje: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    if (mounted) setState(() => _accionando = false);
   }
+}
 
   Future<void> _finalizarViaje() async {
     if (_accionando || _viajeIdActual == null) return;
