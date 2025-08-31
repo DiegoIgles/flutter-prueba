@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/session_cache_service.dart';
 import 'chofer_mis_vehiculos_page.dart';
 import 'chofer_billetera_page.dart';
 import 'chofer_movimientos_page.dart';
 import 'chofer_retirar_page.dart';
+import 'home_page.dart';
 
 class ChoferDashboardPage extends StatefulWidget {
   final String token;
@@ -39,9 +41,25 @@ class _ChoferDashboardPageState extends State<ChoferDashboardPage> {
   }
 
   Future<void> _logout() async {
-    await _authService.logout(chofer: true);
-    if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    try {
+      // Cerrar sesión y limpiar caché
+      await _authService.logout(chofer: true);
+      print('🚪 Sesión de chofer cerrada correctamente');
+      
+      if (mounted) {
+        // Navegar a la página principal
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      print('❌ Error cerrando sesión: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error cerrando sesión: $e')),
+        );
+      }
     }
   }
 
@@ -51,24 +69,85 @@ class _ChoferDashboardPageState extends State<ChoferDashboardPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_getAppBarTitle()),
-        backgroundColor: const Color(0xFF0B0530),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            onPressed: _logout,
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
+  Widget _buildCustomHeader() {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 10,
+        left: 20,
+        right: 20,
+        bottom: 15,
+      ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0B0530), Color(0xFF197B9C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(25),
+          bottomRight: Radius.circular(25),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _getAppBarTitle(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Panel de chofer profesional',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  color: Colors.white,
+                  tooltip: 'Cerrar sesión',
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Column(
+        children: [
+          _buildCustomHeader(),
+          Expanded(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: _pages,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,

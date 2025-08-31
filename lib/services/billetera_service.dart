@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/billetera.dart';
 import '../models/movimiento.dart';
@@ -35,57 +36,130 @@ class BilleteraService {
     }
   }
 
-  Future<BilleteraCargaResponse> cargarSaldo({
-    required int billeteraId,
-    required double monto,
-    required String concepto,
-  }) async {
-    final uri = Uri.parse('$baseUrl/billeteras/cargar');
+  //generación y verificación de pago
 
-    final request = BilleteraCargaRequest(
-      billeteraId: billeteraId,
-      monto: monto,
-      concepto: concepto,
-    );
+  Map<String, dynamic> _cleanJson(Map<String, dynamic> m) {
+    final out = <String, dynamic>{};
+    m.forEach((k, v) {
+      if (v != null) out[k] = v; // NO mandamos null
+    });
+    return out;
+  }
 
-    print('🌐 Cargando saldo en $uri...');
-    print('📤 Payload: ${jsonEncode(request.toJson())}');
-
-    try {
-      final headers = await _authService.authHeaders(chofer: false);
-      final response = await http.post(
-        uri,
-        headers: headers,
-        body: jsonEncode(request.toJson()),
-      );
-
-      print('📥 StatusCode: ${response.statusCode}');
-      print('📥 Body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        return BilleteraCargaResponse.fromJson(data);
-      } else {
-        throw Exception('Error ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      print('🚨 Error en cargarSaldo: $e');
-      rethrow;
+  String _toCurl({
+    required String method,
+    required Uri uri,
+    required Map<String, String> headers,
+    required String? body,
+    bool redactAuth = true,
+  }) {
+    final b = StringBuffer("curl -X '$method' \\\n  '${uri.toString()}'");
+    final h = Map<String, String>.from(headers);
+    if (redactAuth && h.containsKey('Authorization')) {
+      final v = h['Authorization']!;
+      h['Authorization'] =
+          v.length > 24 ? '${v.substring(0, 24)}…(redacted)' : '…(redacted)';
     }
+    for (final e in h.entries) {
+      b.write(" \\\n  -H '${e.key}: ${e.value}'");
+    }
+    if (body != null && body.isNotEmpty) {
+      b.write(" \\\n  -d '${body.replaceAll("'", r"'\''")}'");
+    }
+    return b.toString();
   }
 
-  // Método para simular escaneo de QR y obtener monto
-  Future<double> simularEscaneoQR() async {
-    // Simulación: esperar 2 segundos y devolver un monto aleatorio
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Montos predefinidos para la simulación
-    final montos = [10.0, 20.0, 50.0, 100.0, 200.0];
-    final monto = (montos..shuffle()).first;
-
-    print('📱 QR escaneado - Monto: $monto BOB');
-    return monto;
+  Map<String, String> _redactHeaders(Map<String, String> h) {
+    final clone = Map<String, String>.from(h);
+    if (clone.containsKey('Authorization')) {
+      final v = clone['Authorization']!;
+      clone['Authorization'] =
+          v.length > 24 ? '${v.substring(0, 24)}…(redacted)' : '…(redacted)';
+    }
+    return clone;
   }
+
+  Future<Map<String, dynamic>> generarQr({
+    required double monto,
+    String? vigencia,
+    bool usoUnico = true,
+    String? detalle,
+  }) async {
+    final uri = Uri.parse('$baseUrl/generar'); // tu backend expone /api/generar
+    final baseHeaders = await _authService.authHeaders(chofer: false);
+
+    // fuerza JSON y acepta JSON
+    final headers = {
+      ...baseHeaders,
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    };
+
+    // si no hay token, fallar explícito (evita "Cannot send Null")
+    if (headers['Authorization'] == null || headers['Authorization']!.isEmpty) {
+      throw Exception('No hay token Bearer. Inicia sesión nuevamente.');
+    }
+
+    final payload = _cleanJson({
+      'monto': monto,
+      'vigencia': vigencia, // solo si no es null
+      'uso_unico': usoUnico,
+      'detalle': detalle, // solo si no es null
+    });
+
+    final body = jsonEncode(payload);
+
+    // LOGS
+    debugPrint('🛰️ REQ POST $uri');
+    debugPrint('🧾 Headers: ${{
+      ...headers,
+      if (headers.containsKey('Authorization'))
+        'Authorization':
+            '${headers['Authorization']!.substring(0, 24)}…(redacted)'
+    }}');
+    debugPrint('📦 Body: $body');
+    debugPrint(_toCurl(method: 'POST', uri: uri, headers: headers, body: body));
+
+    final res = await http.post(uri, headers: headers, body: body);
+
+    debugPrint('⬅️ RES ${res.statusCode} ${res.reasonPhrase}');
+    debugPrint('📨 Body: ${res.body}');
+
+    if (res.statusCode == 401 || res.statusCode == 403) {
+      throw Exception('No autorizado. ¿Token expirado?');
+    }
+    if (res.statusCode != 200) {
+      throw Exception('Error ${res.statusCode}: ${res.body}');
+    }
+
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if ((data['Codigo'] ?? 1) != 0) {
+      throw Exception(data['Mensaje'] ?? 'No se pudo generar el QR');
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> verificarQr({required int movimientoId}) async {
+  final uri = Uri.parse('$baseUrl/verificar');
+  final baseHeaders = await _authService.authHeaders(chofer: false);
+  final headers = {
+    ...baseHeaders,
+    'Content-Type': 'application/json',
+    'accept': 'application/json',
+  };
+
+  // ✅ el backend espera string
+  final body = jsonEncode({'movimiento_id': movimientoId.toString()});
+
+  final res = await http.post(uri, headers: headers, body: body);
+  if (res.statusCode == 422) { throw Exception('422 Validation: ${res.body}'); }
+  if (res.statusCode == 401 || res.statusCode == 403) { throw Exception('No autorizado'); }
+  if (res.statusCode != 200) { throw Exception('Error ${res.statusCode}: ${res.body}'); }
+
+  final data = jsonDecode(res.body) as Map<String, dynamic>;
+  if ((data['Codigo'] ?? 1) != 0) { throw Exception(data['Mensaje'] ?? 'Fallo verificación'); }
+  return data;
+ }
 
   // Método para obtener historial de movimientos
   Future<List<Movimiento>> getMovimientos(int clienteId) async {

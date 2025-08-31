@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:prueba/services/session_cache_service.dart';
 import '../models/login_request.dart';
 import '../models/token_response.dart';
 import '../models/cliente_create.dart';
@@ -75,6 +76,21 @@ class AuthService {
       _tokenChofer = null;
     } else {
       _tokenCliente = null;
+    }
+  }
+
+  Future<void> loadSessionFromCache() async {
+    final clienteToken = await SessionCacheService.getClienteToken();
+    final choferToken = await SessionCacheService.getChoferToken();
+
+    if (clienteToken != null && clienteToken.isNotEmpty) {
+      _tokenCliente = clienteToken;
+      print('🔄 Sesión de cliente cargada desde caché');
+    }
+
+    if (choferToken != null && choferToken.isNotEmpty) {
+      _tokenChofer = choferToken;
+      print('🔄 Sesión de chofer cargada desde caché');
     }
   }
 

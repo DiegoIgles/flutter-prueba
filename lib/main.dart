@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'pages/home_page.dart'; // ← usamos HomePage
+import 'pages/splash_screen.dart'; // ← usamos SplashScreen
 import 'providers/billetera_provider.dart';
 import 'providers/chofer_billetera_provider.dart';
 
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF4F46E5)),
           useMaterial3: true,
         ),
-        home: const HomePage(), // ← aquí cambiamos a HomePage
+        home: const SplashScreen(), // ← iniciamos con SplashScreen
       ),
     );
   }
