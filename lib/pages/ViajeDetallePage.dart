@@ -1,3 +1,4 @@
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
@@ -5,11 +6,13 @@ import 'package:location/location.dart';
 class ViajeDetallePage extends StatefulWidget {
   final int viajeId;
   final String monto;
+  final String token; // <-- Agregar token del chofer
 
   const ViajeDetallePage({
     super.key,
     required this.viajeId,
     required this.monto,
+    required this.token,
   });
 
   @override
@@ -20,11 +23,28 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
   LocationData? _ubicacion;
   final Location _location = Location();
   StreamSubscription<LocationData>? _ubicacionSubscription;
+  late IO.Socket socket;
+
 
   @override
   void initState() {
     super.initState();
+    _conectarSocket();
     _iniciarSeguimientoUbicacion();
+  }
+
+  void _conectarSocket() {
+    socket = IO.io(
+      'http://11.0.1.176:8000/driver', // Namespace en la URL
+      IO.OptionBuilder()
+        .setTransports(['websocket'])
+        .setPath('/ws/socket.io')
+        .setAuth({'token': widget.token}) // <-- Usar el token real del chofer
+        .build(),
+    );
+
+    socket.onConnect((_) => print('Socket chofer conectado'));
+    socket.onDisconnect((_) => print('Socket chofer desconectado'));
   }
 
   Future<void> _iniciarSeguimientoUbicacion() async {
@@ -46,6 +66,13 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
         _ubicacionSubscription = _location.onLocationChanged.listen((loc) {
           print('📍 Nueva ubicación: ${loc.latitude}, ${loc.longitude}');
           setState(() => _ubicacion = loc);
+          if (socket.connected) {
+            socket.emit('location', {
+              'lat': loc.latitude,
+              'lng': loc.longitude,
+              'ts': DateTime.now().millisecondsSinceEpoch,
+            });
+          }
         });
       }
     }
@@ -54,6 +81,7 @@ class _ViajeDetallePageState extends State<ViajeDetallePage> {
   @override
   void dispose() {
     _ubicacionSubscription?.cancel();
+    socket.dispose();
     super.dispose();
   }
 

@@ -7,6 +7,7 @@ import 'cliente_billetera_page.dart';
 import 'cliente_perfil_page.dart';
 import 'cliente_movimientos_page.dart';
 import 'package:prueba/widgets/ubicacion_modal.dart';
+import 'ubicacion_page.dart';
 
 class ClienteDashboardPage extends StatefulWidget {
   final String token;
@@ -51,7 +52,7 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const UbicacionModal(),
+      builder: (_) => UbicacionModal(token: widget.token),
     );
   }
 
@@ -374,7 +375,14 @@ class _ClienteDashboardPageState extends State<ClienteDashboardPage> {
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: _mostrarUbicacionModal,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UbicacionPage(token: widget.token),
+                ),
+              );
+            },
             icon: const Icon(Icons.my_location),
             label: const Text('Ver ubicación en tiempo real'),
             style: ElevatedButton.styleFrom(

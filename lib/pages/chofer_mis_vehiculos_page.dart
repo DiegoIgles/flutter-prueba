@@ -82,6 +82,7 @@ Future<void> _cargarTipos() async {
         builder: (_) => ViajeDetallePage(
           viajeId: r.viajeId,
           monto: r.monto,
+          token: widget.token,
         ),
       ),
     );
